@@ -17,34 +17,20 @@ export class ArticleService {
   async getAllArticles(author: string, tag: string): Promise<Article[]> {
     return await this.prismaService.article.findMany({
       where: {
-        OR: [
-          {
-            author: {
-              name: {
-                contains: author,
-              },
-            },
-          },
-          {
-            tagList: {
-              some: {
-                name: {
-                  contains: tag,
-                },
-              },
-            },
-          },
-        ],
-      },
-      include: {
         author: {
-          select: {
-            name: true,
-            bio: true,
-            image: true,
+          name: {
+            contains: author,
+          },
+        },
+        tagList: {
+          some: {
+            name: {
+              contains: tag,
+            },
           },
         },
       },
+      include: this.articleIncludeOpts(),
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -60,15 +46,7 @@ export class ArticleService {
       where: {
         slug,
       },
-      include: {
-        author: {
-          select: {
-            name: true,
-            bio: true,
-            image: true,
-          },
-        },
-      },
+      include: this.articleIncludeOpts(),
     });
   }
 
@@ -88,22 +66,11 @@ export class ArticleService {
         ...dto,
         slug: slugify(dto.title, { lower: true }),
         tagList: {
-          create: {
-            name: 'test',
-          },
+          connect: dto.tagList.map((tag) => ({ name: tag.name })),
         },
         authorId: id,
       },
-      include: {
-        author: {
-          select: {
-            name: true,
-            bio: true,
-            image: true,
-          },
-        },
-        tagList: true,
-      },
+      include: this.articleIncludeOpts(),
     });
   }
 
@@ -130,15 +97,7 @@ export class ArticleService {
         ...dto,
         slug: slugify(dto.title, { lower: true }),
       },
-      include: {
-        author: {
-          select: {
-            name: true,
-            bio: true,
-            image: true,
-          },
-        },
-      },
+      include: this.articleIncludeOpts(),
     });
   }
 
@@ -166,5 +125,18 @@ export class ArticleService {
         slug,
       },
     });
+  }
+
+  private articleIncludeOpts() {
+    return {
+      author: {
+        select: {
+          name: true,
+          bio: true,
+          image: true,
+        },
+      },
+      tagList: true,
+    };
   }
 }

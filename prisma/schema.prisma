@@ -11,12 +11,41 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
+  id        String    @id @default(uuid())
+  email     String    @unique
   name      String
   password  String
-  bio       String   @default("")
-  image     String   @default("")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  bio       String    @default("")
+  image     String    @default("")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  articles  Article[] @relation("articles")
+  favorites Article[] @relation("favorites")
+
+  @@map("users")
+}
+
+model Article {
+  id             String   @id @default(uuid())
+  slug           String   @unique
+  title          String
+  description    String   @default("")
+  body           String   @default("")
+  tagList        Tag[]
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  favoritesCount Int      @default(0) @map("favorites_count")
+  author         User     @relation("articles", fields: [authorId], references: [id])
+  authorId       String   @map("author_id")
+  favorited      User[]   @relation("favorites")
+
+  @@map("articles")
+}
+
+model Tag {
+  id       String    @id @default(uuid())
+  name     String    @unique
+  articles Article[]
+
+  @@map("tags")
 }

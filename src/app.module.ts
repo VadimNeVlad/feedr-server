@@ -7,6 +7,7 @@ import { AuthModule } from './auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
 import { UserModule } from './user/user.module';
 import { ArticleModule } from './article/article.module';
+import { TagModule } from './tag/tag.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { ArticleModule } from './article/article.module';
     ConfigModule.forRoot(),
     UserModule,
     ArticleModule,
+    TagModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],

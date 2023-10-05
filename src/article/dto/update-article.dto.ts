@@ -1,15 +1,18 @@
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class UpdateArticleDto {
   @IsNotEmpty()
   @IsString()
-  title: string;
+  @IsOptional()
+  title?: string;
 
   @IsNotEmpty()
   @IsString()
-  description: string;
+  @IsOptional()
+  description?: string;
 
   @IsNotEmpty()
   @IsString()
-  body: string;
+  @IsOptional()
+  body?: string;
 }

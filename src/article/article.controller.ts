@@ -13,8 +13,9 @@ import { ArticleService } from './article.service';
 import { JwtGuard } from 'src/auth/guards/jwt.guard';
 import { CurrentUser } from 'src/user/decorators/current-user.decorator';
 import { CreateArticleDto } from './dto/create-article.dto';
-import { Article } from '@prisma/client';
+import { Article, User } from '@prisma/client';
 import { UpdateArticleDto } from './dto/update-article.dto';
+import { GetAllArticlesDto } from './dto/get-all-articles.dto';
 
 @Controller('articles')
 export class ArticleController {
@@ -22,10 +23,9 @@ export class ArticleController {
 
   @Get()
   async getAllArticles(
-    @Query('author') author?: string,
-    @Query('tag') tag?: string,
+    @Query() queryDto: GetAllArticlesDto,
   ): Promise<Article[]> {
-    return this.articleService.getAllArticles(author, tag);
+    return this.articleService.getAllArticles(queryDto);
   }
 
   @Get(':slug')
@@ -59,5 +59,23 @@ export class ArticleController {
     @Param('slug') slug: string,
   ): Promise<void> {
     return this.articleService.deleteArticle(id, slug);
+  }
+
+  @Post(':slug/favorite')
+  @UseGuards(JwtGuard)
+  async favoriteArticle(
+    @CurrentUser() user: User,
+    @Param('slug') slug: string,
+  ) {
+    return this.articleService.favoriteArticle(user, slug);
+  }
+
+  @Delete(':slug/favorite')
+  @UseGuards(JwtGuard)
+  async unfavoriteArticle(
+    @CurrentUser() user: User,
+    @Param('slug') slug: string,
+  ) {
+    return this.articleService.unfavoriteArticle(user, slug);
   }
 }

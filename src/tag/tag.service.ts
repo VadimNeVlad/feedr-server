@@ -1,4 +1,4 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateTagsDto } from './dto/create-tags.dto';
 import { Tag } from '@prisma/client';
@@ -13,22 +13,9 @@ export class TagService {
   }
 
   async createTags(dto: CreateTagsDto[]): Promise<TagsCount> {
-    const tagsList = dto.map((name) => name);
-    const tagsNameList = [];
-    tagsList.map((item) => tagsNameList.push(item.name));
-
-    const tags = await this.prismaService.tag.findMany({
-      where: {
-        name: { in: tagsNameList },
-      },
-    });
-
-    if (tags.length) {
-      throw new ConflictException('Tag or tags with this name already exists');
-    }
-
     return await this.prismaService.tag.createMany({
-      data: tagsList,
+      data: dto.map((tagName) => tagName),
+      skipDuplicates: true,
     });
   }
 }

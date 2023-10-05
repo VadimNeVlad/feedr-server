@@ -21,7 +21,7 @@ export class UserController {
 
   @Get()
   @UseGuards(JwtGuard)
-  async me(@CurrentUser() user: User): Promise<User> {
-    return user;
+  async getUser(@CurrentUser('id') id: string): Promise<User> {
+    return this.userService.getUser(id);
   }
 }

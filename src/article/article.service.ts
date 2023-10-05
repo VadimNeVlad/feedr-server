@@ -7,14 +7,32 @@ import {
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateArticleDto } from './dto/create-article.dto';
 import slugify from 'slugify';
-import { Article } from '@prisma/client';
+import { Article, Prisma, User } from '@prisma/client';
 import { UpdateArticleDto } from './dto/update-article.dto';
+import { ArticlesSort, GetAllArticlesDto } from './dto/get-all-articles.dto';
 
 @Injectable()
 export class ArticleService {
   constructor(private readonly prismaService: PrismaService) {}
 
-  async getAllArticles(author: string, tag: string): Promise<Article[]> {
+  async getAllArticles(queryDto: GetAllArticlesDto): Promise<Article[]> {
+    const { author, tag, sort, pageIndex = 0, pageSize = 20 } = queryDto;
+    const prismaSort: Prisma.ArticleOrderByWithRelationInput[] = [];
+
+    switch (sort) {
+      case ArticlesSort.TOP:
+        prismaSort.push({ favoritesCount: 'desc' });
+        break;
+
+      case ArticlesSort.OLDEST:
+        prismaSort.push({ createdAt: 'asc' });
+        break;
+
+      default:
+        prismaSort.push({ createdAt: 'desc' });
+        break;
+    }
+
     return await this.prismaService.article.findMany({
       where: {
         author: {
@@ -30,8 +48,10 @@ export class ArticleService {
           },
         },
       },
+      skip: pageIndex * pageSize,
+      take: pageSize,
       include: this.articleIncludeOpts(),
-      orderBy: { createdAt: 'desc' },
+      orderBy: prismaSort,
     });
   }
 
@@ -119,6 +139,70 @@ export class ArticleService {
     });
   }
 
+  async favoriteArticle(user: User, slug: string) {
+    const article = await this.prismaService.article.findUnique({
+      where: {
+        slug,
+      },
+      include: {
+        favorited: true,
+      },
+    });
+
+    if (!article) {
+      throw new NotFoundException('Article does not exist');
+    }
+
+    const isFavorited = article.favorited.some(
+      (favoritedUserId) => favoritedUserId.id === user.id,
+    );
+
+    return await this.prismaService.article.update({
+      where: {
+        slug,
+      },
+      data: {
+        favorited: { connect: { ...user } },
+        favoritesCount: isFavorited
+          ? article.favoritesCount
+          : article.favoritesCount + 1,
+      },
+      include: this.articleIncludeOpts(),
+    });
+  }
+
+  async unfavoriteArticle(user: User, slug: string) {
+    const article = await this.prismaService.article.findUnique({
+      where: {
+        slug,
+      },
+      include: {
+        favorited: true,
+      },
+    });
+
+    if (!article) {
+      throw new NotFoundException('Article does not exist');
+    }
+
+    const isFavorited = article.favorited.some(
+      (favoritedUserId) => favoritedUserId.id === user.id,
+    );
+
+    return await this.prismaService.article.update({
+      where: {
+        slug,
+      },
+      data: {
+        favorited: { disconnect: { ...user } },
+        favoritesCount: isFavorited
+          ? article.favoritesCount - 1
+          : article.favoritesCount,
+      },
+      include: this.articleIncludeOpts(),
+    });
+  }
+
   private async findArticleBySlug(slug: string): Promise<Article> {
     return this.prismaService.article.findUnique({
       where: {
@@ -131,12 +215,21 @@ export class ArticleService {
     return {
       author: {
         select: {
+          id: true,
           name: true,
           bio: true,
           image: true,
         },
       },
       tagList: true,
+      favorited: {
+        select: {
+          id: true,
+          name: true,
+          bio: true,
+          image: true,
+        },
+      },
     };
   }
 }

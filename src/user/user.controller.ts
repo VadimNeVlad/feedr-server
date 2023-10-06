@@ -1,5 +1,13 @@
-import { Controller, Put, Body, Get } from '@nestjs/common';
-import { UseGuards } from '@nestjs/common/decorators';
+import {
+  Controller,
+  Put,
+  Body,
+  Get,
+  Delete,
+  Param,
+  UseGuards,
+  Post,
+} from '@nestjs/common';
 import { UserService } from './user.service';
 import { JwtGuard } from 'src/auth/guards/jwt.guard';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -10,18 +18,38 @@ import { User } from '@prisma/client';
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
+  @Get()
+  @UseGuards(JwtGuard)
+  async getCurrentUser(@CurrentUser('id') id: string): Promise<User> {
+    return this.userService.getCurrentUser(id);
+  }
+
+  @Get(':id')
+  async getUserById(@Param('id') id: string): Promise<User> {
+    return this.userService.getUserById(id);
+  }
+
   @Put()
   @UseGuards(JwtGuard)
-  async updateUser(
+  async updateCurrentUser(
     @CurrentUser('id') id: string,
     @Body() dto: UpdateUserDto,
   ): Promise<User> {
-    return this.userService.updateUser(id, dto);
+    return this.userService.updateCurrentUser(id, dto);
   }
 
-  @Get()
+  @Delete()
   @UseGuards(JwtGuard)
-  async getUser(@CurrentUser('id') id: string): Promise<User> {
-    return this.userService.getUser(id);
+  async deleteCurrentUser(@CurrentUser('id') id: string): Promise<void> {
+    return this.userService.deleteCurrentUser(id);
+  }
+
+  @Post(':fuid/follow')
+  @UseGuards(JwtGuard)
+  async followUser(
+    @CurrentUser() currentUser: User,
+    @Param('fuid') fuid: string,
+  ): Promise<User> {
+    return this.userService.followUser(currentUser, fuid);
   }
 }

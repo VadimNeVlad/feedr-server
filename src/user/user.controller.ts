@@ -13,6 +13,7 @@ import { JwtGuard } from 'src/auth/guards/jwt.guard';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { User } from '@prisma/client';
+import { FollowUnfollow } from './interfaces/follow-unfollow';
 
 @Controller('user')
 export class UserController {
@@ -49,7 +50,16 @@ export class UserController {
   async followUser(
     @CurrentUser() currentUser: User,
     @Param('fuid') fuid: string,
-  ): Promise<User> {
+  ): Promise<FollowUnfollow> {
     return this.userService.followUser(currentUser, fuid);
+  }
+
+  @Delete(':fuid/follow')
+  @UseGuards(JwtGuard)
+  async unfollowUser(
+    @CurrentUser() currentUser: User,
+    @Param('fuid') fuid: string,
+  ): Promise<{ count: number }> {
+    return this.userService.unfollowUser(currentUser, fuid);
   }
 }

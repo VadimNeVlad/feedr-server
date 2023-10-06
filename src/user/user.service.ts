@@ -7,6 +7,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { hashSync } from 'bcrypt';
 import { User } from '@prisma/client';
+import { FollowUnfollow } from './interfaces/follow-unfollow';
 
 @Injectable()
 export class UserService {
@@ -24,6 +25,7 @@ export class UserService {
 
   async getUserById(id: string): Promise<User> {
     const user = await this.findUser(id);
+    delete user.password;
 
     if (!user) {
       throw new NotFoundException();
@@ -64,7 +66,7 @@ export class UserService {
     });
   }
 
-  async followUser(currentUser: User, fuid: string): Promise<any> {
+  async followUser(currentUser: User, fuid: string): Promise<FollowUnfollow> {
     if (currentUser.id === fuid) {
       throw new ConflictException('You cannot follow yourself');
     }
@@ -87,14 +89,34 @@ export class UserService {
       throw new ConflictException('You have already follow this user');
     }
 
-    const follower = await this.prismaService.follow.create({
+    return await this.prismaService.follow.create({
       data: {
         followerId: currentUser.id,
         followingId: followingUser.id,
       },
     });
+  }
 
-    return follower;
+  async unfollowUser(
+    currentUser: User,
+    fuid: string,
+  ): Promise<{ count: number }> {
+    const followingUser = await this.prismaService.user.findUnique({
+      where: {
+        id: fuid,
+      },
+      include: {
+        followers: true,
+        following: true,
+      },
+    });
+
+    return await this.prismaService.follow.deleteMany({
+      where: {
+        followerId: currentUser.id,
+        followingId: followingUser.id,
+      },
+    });
   }
 
   private async findUser(id: string): Promise<User> {

@@ -13,7 +13,7 @@ import { JwtGuard } from 'src/auth/guards/jwt.guard';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { User } from '@prisma/client';
-import { FollowUnfollow } from './interfaces/follow-unfollow';
+import { Follow } from './interfaces/follow';
 
 @Controller('user')
 export class UserController {
@@ -50,7 +50,7 @@ export class UserController {
   async followUser(
     @CurrentUser() currentUser: User,
     @Param('fuid') fuid: string,
-  ): Promise<FollowUnfollow> {
+  ): Promise<Follow> {
     return this.userService.followUser(currentUser, fuid);
   }
 

@@ -7,7 +7,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { hashSync } from 'bcrypt';
 import { User } from '@prisma/client';
-import { FollowUnfollow } from './interfaces/follow-unfollow';
+import { Follow } from './interfaces/follow';
 
 @Injectable()
 export class UserService {
@@ -66,7 +66,7 @@ export class UserService {
     });
   }
 
-  async followUser(currentUser: User, fuid: string): Promise<FollowUnfollow> {
+  async followUser(currentUser: User, fuid: string): Promise<Follow> {
     if (currentUser.id === fuid) {
       throw new ConflictException('You cannot follow yourself');
     }

@@ -21,7 +21,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async register(dto: RegisterDto): Promise<User> {
+  async register(dto: RegisterDto): Promise<AuthResponse> {
     const { email, name, password } = dto;
 
     const userExist = await this.prismaService.user.findUnique({
@@ -36,13 +36,20 @@ export class AuthService {
       );
     }
 
-    return await this.prismaService.user.create({
+    const user = await this.prismaService.user.create({
       data: {
         email,
         name,
         password: this.hashPassword(password),
       },
     });
+
+    const tokens = await this.generateTokens(user);
+
+    return {
+      user,
+      ...tokens,
+    };
   }
 
   async login(dto: LoginDto): Promise<AuthResponse> {

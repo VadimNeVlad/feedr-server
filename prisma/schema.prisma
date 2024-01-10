@@ -31,7 +31,6 @@ model Article {
   id             String   @id @default(uuid())
   slug           String   @unique
   title          String
-  description    String   @default("")
   body           String   @default("")
   tagList        Tag[]
   createdAt      DateTime @default(now()) @map("created_at")

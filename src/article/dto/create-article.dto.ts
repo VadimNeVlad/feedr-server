@@ -8,10 +8,6 @@ export class CreateArticleDto {
 
   @IsNotEmpty()
   @IsString()
-  description: string;
-
-  @IsNotEmpty()
-  @IsString()
   body: string;
 
   @IsArray()

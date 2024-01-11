@@ -86,7 +86,14 @@ export class ArticleService {
         ...dto,
         slug: slugify(dto.title, { lower: true }),
         tagList: {
-          connect: dto.tagList.map((tag) => ({ name: tag.name })),
+          connectOrCreate: dto.tagList.map((tag) => ({
+            where: {
+              name: tag.name,
+            },
+            create: {
+              name: tag.name,
+            },
+          })),
         },
         authorId: id,
       },

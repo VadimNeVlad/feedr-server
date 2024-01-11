@@ -14,7 +14,7 @@ export class TagService {
 
   async createTags(dto: CreateTagsDto[]): Promise<TagsCount> {
     return await this.prismaService.tag.createMany({
-      data: dto.map((tagName) => tagName),
+      data: dto,
       skipDuplicates: true,
     });
   }

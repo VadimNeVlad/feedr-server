@@ -28,6 +28,7 @@ export class AuthService {
       where: {
         email,
       },
+      include: this.authIncludeOpts(),
     });
 
     if (userExist) {
@@ -42,6 +43,7 @@ export class AuthService {
         name,
         password: this.hashPassword(password),
       },
+      include: this.authIncludeOpts(),
     });
 
     const tokens = await this.generateTokens(user);
@@ -59,6 +61,7 @@ export class AuthService {
       where: {
         email,
       },
+      include: this.authIncludeOpts(),
     });
 
     if (!user) {
@@ -116,5 +119,14 @@ export class AuthService {
 
   private hashPassword(str: string): string {
     return hashSync(str, 10);
+  }
+
+  private authIncludeOpts() {
+    return {
+      articles: true,
+      favorites: true,
+      followers: true,
+      following: true,
+    };
   }
 }

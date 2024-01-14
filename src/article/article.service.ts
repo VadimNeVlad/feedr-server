@@ -224,8 +224,10 @@ export class ArticleService {
         select: {
           id: true,
           name: true,
+          email: true,
           bio: true,
           image: true,
+          createdAt: true,
         },
       },
       tagList: true,
@@ -233,8 +235,10 @@ export class ArticleService {
         select: {
           id: true,
           name: true,
+          email: true,
           bio: true,
           image: true,
+          createdAt: true,
         },
       },
     };

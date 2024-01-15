@@ -227,6 +227,8 @@ export class ArticleService {
           email: true,
           bio: true,
           image: true,
+          followers: true,
+          following: true,
           createdAt: true,
         },
       },

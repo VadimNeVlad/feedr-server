@@ -8,6 +8,7 @@ import { ConfigModule } from '@nestjs/config';
 import { UserModule } from './user/user.module';
 import { ArticleModule } from './article/article.module';
 import { TagModule } from './tag/tag.module';
+import { CommentModule } from './comment/comment.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { TagModule } from './tag/tag.module';
     UserModule,
     ArticleModule,
     TagModule,
+    CommentModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],

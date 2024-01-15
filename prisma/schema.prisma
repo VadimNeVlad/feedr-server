@@ -23,22 +23,24 @@ model User {
   favorites Article[] @relation("favorites")
   following Follow[]  @relation("follower")
   followers Follow[]  @relation("following")
+  comments  Comment[]
 
   @@map("users")
 }
 
 model Article {
-  id             String   @id @default(uuid())
-  slug           String   @unique
+  id             String    @id @default(uuid())
+  slug           String    @unique
   title          String
-  body           String   @default("")
+  body           String    @default("")
   tagList        Tag[]
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
-  favoritesCount Int      @default(0) @map("favorites_count")
-  author         User     @relation("articles", fields: [authorId], references: [id])
-  authorId       String   @map("author_id")
-  favorited      User[]   @relation("favorites")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  favoritesCount Int       @default(0) @map("favorites_count")
+  author         User      @relation("articles", fields: [authorId], references: [id])
+  authorId       String    @map("author_id")
+  favorited      User[]    @relation("favorites")
+  comments       Comment[]
 
   @@map("articles")
 }
@@ -58,4 +60,15 @@ model Follow {
   followingId String @map("following_id")
 
   @@id([followerId, followingId])
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  content   String
+  author    User     @relation(fields: [authorId], references: [id])
+  authorId  String   @map("author_id")
+  article   Article  @relation(fields: [articleId], references: [id])
+  articleId String   @map("article_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 }

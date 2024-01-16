@@ -12,6 +12,17 @@ export class CommentService {
       where: {
         articleId,
       },
+      include: {
+        author: {
+          select: {
+            id: true,
+            image: true,
+            email: true,
+            name: true,
+          },
+        },
+        article: true,
+      },
     });
   }
 

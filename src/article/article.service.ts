@@ -243,6 +243,7 @@ export class ArticleService {
           createdAt: true,
         },
       },
+      comments: true,
     };
   }
 }

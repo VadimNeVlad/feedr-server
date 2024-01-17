@@ -17,11 +17,12 @@ export class CommentService {
           select: {
             id: true,
             image: true,
-            email: true,
             name: true,
           },
         },
-        article: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
       },
     });
   }
@@ -31,6 +32,17 @@ export class CommentService {
     articleId: string,
     dto: CreateCommentDto,
   ): Promise<Comment> {
+    const comments = await this.getComments(articleId);
+
+    await this.prismaService.article.update({
+      where: {
+        id: articleId,
+      },
+      data: {
+        commentsCount: comments.length + 1,
+      },
+    });
+
     return await this.prismaService.comment.create({
       data: {
         ...dto,

@@ -139,6 +139,12 @@ export class ArticleService {
       throw new ForbiddenException('You are not allowed to delete this post');
     }
 
+    await this.prismaService.comment.deleteMany({
+      where: {
+        articleId: article.id,
+      },
+    });
+
     await this.prismaService.article.delete({
       where: {
         slug,
@@ -222,28 +228,15 @@ export class ArticleService {
     return {
       author: {
         select: {
-          id: true,
           name: true,
           email: true,
           bio: true,
           image: true,
-          followers: true,
-          following: true,
           createdAt: true,
         },
       },
       tagList: true,
-      favorited: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          bio: true,
-          image: true,
-          createdAt: true,
-        },
-      },
-      comments: true,
+      favorited: true,
     };
   }
 }

@@ -8,6 +8,10 @@ import {
   Put,
   Get,
   Query,
+  UseInterceptors,
+  UploadedFile,
+  ParseFilePipe,
+  FileTypeValidator,
 } from '@nestjs/common';
 import { ArticleService } from './article.service';
 import { JwtGuard } from 'src/auth/guards/jwt.guard';
@@ -16,6 +20,8 @@ import { CreateArticleDto } from './dto/create-article.dto';
 import { Article, User } from '@prisma/client';
 import { UpdateArticleDto } from './dto/update-article.dto';
 import { GetAllArticlesDto } from './dto/get-all-articles.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { storage } from '../config/multer.config';
 
 @Controller('articles')
 export class ArticleController {
@@ -35,11 +41,18 @@ export class ArticleController {
 
   @Post()
   @UseGuards(JwtGuard)
+  @UseInterceptors(FileInterceptor('file', { storage }))
   async createArticle(
     @CurrentUser('id') id: string,
     @Body() dto: CreateArticleDto,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [new FileTypeValidator({ fileType: 'image/jpeg/png' })],
+      }),
+    )
+    file: Express.Multer.File,
   ): Promise<Article> {
-    return this.articleService.createArticle(id, dto);
+    return this.articleService.createArticle(id, dto, file);
   }
 
   @Put(':slug')

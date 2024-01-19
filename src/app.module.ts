@@ -9,6 +9,8 @@ import { UserModule } from './user/user.module';
 import { ArticleModule } from './article/article.module';
 import { TagModule } from './tag/tag.module';
 import { CommentModule } from './comment/comment.module';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 
 @Module({
   imports: [
@@ -19,6 +21,10 @@ import { CommentModule } from './comment/comment.module';
     ArticleModule,
     TagModule,
     CommentModule,
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'uploads'),
+      exclude: ['/api/(.*)'],
+    }),
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],

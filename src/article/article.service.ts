@@ -7,7 +7,7 @@ import {
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateArticleDto } from './dto/create-article.dto';
 import slugify from 'slugify';
-import { Article, Prisma, User } from '@prisma/client';
+import { Article, Prisma, Tag, User } from '@prisma/client';
 import { UpdateArticleDto } from './dto/update-article.dto';
 import { ArticlesSort, GetAllArticlesDto } from './dto/get-all-articles.dto';
 
@@ -70,7 +70,12 @@ export class ArticleService {
     });
   }
 
-  async createArticle(id: string, dto: CreateArticleDto) {
+  async createArticle(
+    id: string,
+    dto: CreateArticleDto,
+    file: Express.Multer.File,
+  ) {
+    const tagList = JSON.parse(dto.tagList);
     const article = await this.prismaService.article.findUnique({
       where: {
         slug: slugify(dto.title, { lower: true }),
@@ -85,8 +90,9 @@ export class ArticleService {
       data: {
         ...dto,
         slug: slugify(dto.title, { lower: true }),
+        image: file.filename,
         tagList: {
-          connectOrCreate: dto.tagList.map((tag) => ({
+          connectOrCreate: tagList.map((tag: Tag) => ({
             where: {
               name: tag.name,
             },

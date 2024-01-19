@@ -1,5 +1,4 @@
-import { Tag } from '@prisma/client';
-import { IsArray, IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsString } from 'class-validator';
 
 export class CreateArticleDto {
   @IsNotEmpty()
@@ -10,7 +9,7 @@ export class CreateArticleDto {
   @IsString()
   body: string;
 
-  @IsArray()
   @IsNotEmpty()
-  tagList: Tag[];
+  @IsString()
+  tagList: string;
 }

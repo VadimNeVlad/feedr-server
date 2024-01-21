@@ -7,6 +7,8 @@ import {
   Param,
   UseGuards,
   Post,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { JwtGuard } from 'src/auth/guards/jwt.guard';
@@ -14,6 +16,8 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { User } from '@prisma/client';
 import { Follow } from './interfaces/follow';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { avatarStorage } from 'src/config/multer.config';
 
 @Controller('user')
 export class UserController {
@@ -45,21 +49,31 @@ export class UserController {
     return this.userService.deleteCurrentUser(id);
   }
 
+  @Put('update-avatar')
+  @UseGuards(JwtGuard)
+  @UseInterceptors(FileInterceptor('avatar', { storage: avatarStorage }))
+  async updateAvatar(
+    @CurrentUser('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<User> {
+    return this.userService.updateAvatar(id, file);
+  }
+
   @Post(':fuid/follow')
   @UseGuards(JwtGuard)
   async followUser(
-    @CurrentUser() currentUser: User,
+    @CurrentUser('id') id: string,
     @Param('fuid') fuid: string,
   ): Promise<Follow> {
-    return this.userService.followUser(currentUser, fuid);
+    return this.userService.followUser(id, fuid);
   }
 
   @Delete(':fuid/follow')
   @UseGuards(JwtGuard)
   async unfollowUser(
-    @CurrentUser() currentUser: User,
+    @CurrentUser('id') id: string,
     @Param('fuid') fuid: string,
   ): Promise<{ count: number }> {
-    return this.userService.unfollowUser(currentUser, fuid);
+    return this.userService.unfollowUser(id, fuid);
   }
 }

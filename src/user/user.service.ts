@@ -52,6 +52,21 @@ export class UserService {
     });
   }
 
+  async updateAvatar(id: string, file: Express.Multer.File): Promise<User> {
+    if (!file) {
+      throw new NotFoundException();
+    }
+
+    return await this.prismaService.user.update({
+      where: {
+        id,
+      },
+      data: {
+        image: file.filename,
+      },
+    });
+  }
+
   async deleteCurrentUser(id: string): Promise<void> {
     const user = await this.findUser(id);
 
@@ -66,8 +81,8 @@ export class UserService {
     });
   }
 
-  async followUser(currentUser: User, fuid: string): Promise<Follow> {
-    if (currentUser.id === fuid) {
+  async followUser(id: string, fuid: string): Promise<Follow> {
+    if (id === fuid) {
       throw new ConflictException('You cannot follow yourself');
     }
 
@@ -82,7 +97,7 @@ export class UserService {
     });
 
     const isFollowed = followingUser.followers.some(
-      (follower) => follower.followerId === currentUser.id,
+      (follower) => follower.followerId === id,
     );
 
     if (isFollowed) {
@@ -91,16 +106,13 @@ export class UserService {
 
     return await this.prismaService.follow.create({
       data: {
-        followerId: currentUser.id,
+        followerId: id,
         followingId: followingUser.id,
       },
     });
   }
 
-  async unfollowUser(
-    currentUser: User,
-    fuid: string,
-  ): Promise<{ count: number }> {
+  async unfollowUser(id: string, fuid: string): Promise<{ count: number }> {
     const followingUser = await this.prismaService.user.findUnique({
       where: {
         id: fuid,
@@ -113,7 +125,7 @@ export class UserService {
 
     return await this.prismaService.follow.deleteMany({
       where: {
-        followerId: currentUser.id,
+        followerId: id,
         followingId: followingUser.id,
       },
     });

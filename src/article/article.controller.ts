@@ -41,13 +41,14 @@ export class ArticleController {
 
   @Post()
   @UseGuards(JwtGuard)
-  @UseInterceptors(FileInterceptor('file', { storage: articleStorage }))
+  @UseInterceptors(FileInterceptor('image', { storage: articleStorage }))
   async createArticle(
     @CurrentUser('id') id: string,
     @Body() dto: CreateArticleDto,
     @UploadedFile(
       new ParseFilePipe({
         validators: [new FileTypeValidator({ fileType: 'image/*' })],
+        fileIsRequired: false,
       }),
     )
     file: Express.Multer.File,
@@ -57,12 +58,20 @@ export class ArticleController {
 
   @Put(':slug')
   @UseGuards(JwtGuard)
+  @UseInterceptors(FileInterceptor('image', { storage: articleStorage }))
   async updateArticle(
     @CurrentUser('id') id: string,
     @Param('slug') slug: string,
     @Body() dto: UpdateArticleDto,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [new FileTypeValidator({ fileType: 'image/*' })],
+        fileIsRequired: false,
+      }),
+    )
+    file: Express.Multer.File,
   ): Promise<Article> {
-    return this.articleService.updateArticle(id, slug, dto);
+    return this.articleService.updateArticle(id, slug, dto, file);
   }
 
   @Delete(':slug')

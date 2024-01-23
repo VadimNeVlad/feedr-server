@@ -1,7 +1,7 @@
 import { diskStorage } from 'multer';
 
 export const articleStorage = diskStorage({
-  destination: './uploads/ariticles',
+  destination: './uploads/articles',
   filename: (req, file, cb) => {
     const randomName = Array(32)
       .fill(null)

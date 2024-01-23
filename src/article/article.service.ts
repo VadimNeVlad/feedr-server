@@ -90,7 +90,7 @@ export class ArticleService {
       data: {
         ...dto,
         slug: slugify(dto.title, { lower: true }),
-        image: file.filename,
+        image: file ? file.filename : '',
         tagList: {
           connectOrCreate: tagList.map((tag: Tag) => ({
             where: {
@@ -111,6 +111,7 @@ export class ArticleService {
     id: string,
     slug: string,
     dto: UpdateArticleDto,
+    file: Express.Multer.File,
   ): Promise<Article> {
     const article = await this.findArticleBySlug(slug);
 
@@ -129,6 +130,7 @@ export class ArticleService {
       data: {
         ...dto,
         slug: slugify(dto.title, { lower: true }),
+        image: file ? file.filename : '',
       },
       include: this.articleIncludeOpts(),
     });

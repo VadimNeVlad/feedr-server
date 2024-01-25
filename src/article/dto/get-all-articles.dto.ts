@@ -1,7 +1,7 @@
 import { IsEnum, IsOptional, IsString } from 'class-validator';
 
 export enum ArticlesSort {
-  NEWEST = 'Newest',
+  LATEST = 'Latest',
   OLDEST = 'Oldest',
   TOP = 'Top',
 }
@@ -9,7 +9,7 @@ export enum ArticlesSort {
 export class GetAllArticlesDto {
   @IsOptional()
   @IsEnum(ArticlesSort)
-  sort?: ArticlesSort;
+  sort_by?: ArticlesSort;
 
   @IsOptional()
   @IsString()
@@ -21,9 +21,9 @@ export class GetAllArticlesDto {
 
   @IsOptional()
   @IsString()
-  pageIndex?: number;
+  page?: number;
 
   @IsOptional()
   @IsString()
-  pageSize?: number;
+  per_page?: number;
 }

@@ -16,10 +16,10 @@ export class ArticleService {
   constructor(private readonly prismaService: PrismaService) {}
 
   async getAllArticles(queryDto: GetAllArticlesDto): Promise<Article[]> {
-    const { author, tag, sort, pageIndex = 0, pageSize = 20 } = queryDto;
+    const { author, tag, sort_by, page = 0, per_page = 10 } = queryDto;
     const prismaSort: Prisma.ArticleOrderByWithRelationInput[] = [];
 
-    switch (sort) {
+    switch (sort_by) {
       case ArticlesSort.TOP:
         prismaSort.push({ favoritesCount: 'desc' });
         break;
@@ -48,15 +48,15 @@ export class ArticleService {
           },
         },
       },
-      skip: pageIndex * pageSize,
-      take: pageSize,
+      skip: page * per_page,
+      take: +per_page,
       include: this.articleIncludeOpts(),
       orderBy: prismaSort,
     });
   }
 
-  async getSingleArticle(slug: string): Promise<Article> {
-    const article = await this.findArticleBySlug(slug);
+  async getSingleArticle(id: string): Promise<Article> {
+    const article = await this.findArticleById(id);
 
     if (!article) {
       throw new NotFoundException('Article does not exist');
@@ -64,7 +64,7 @@ export class ArticleService {
 
     return await this.prismaService.article.findUnique({
       where: {
-        slug,
+        id,
       },
       include: this.articleIncludeOpts(),
     });
@@ -108,24 +108,24 @@ export class ArticleService {
   }
 
   async updateArticle(
+    uid: string,
     id: string,
-    slug: string,
     dto: UpdateArticleDto,
     file: Express.Multer.File,
   ): Promise<Article> {
-    const article = await this.findArticleBySlug(slug);
+    const article = await this.findArticleById(id);
 
     if (!article) {
       throw new NotFoundException('Article does not exist');
     }
 
-    if (article.authorId !== id) {
+    if (article.authorId !== uid) {
       throw new ForbiddenException('You are not allowed to update this post');
     }
 
     return await this.prismaService.article.update({
       where: {
-        slug,
+        id,
       },
       data: {
         ...dto,
@@ -136,14 +136,14 @@ export class ArticleService {
     });
   }
 
-  async deleteArticle(id: string, slug: string): Promise<void> {
-    const article = await this.findArticleBySlug(slug);
+  async deleteArticle(uid: string, id: string): Promise<void> {
+    const article = await this.findArticleById(id);
 
     if (!article) {
       throw new NotFoundException('Article does not exist');
     }
 
-    if (article.authorId !== id) {
+    if (article.authorId !== uid) {
       throw new ForbiddenException('You are not allowed to delete this post');
     }
 
@@ -155,15 +155,15 @@ export class ArticleService {
 
     await this.prismaService.article.delete({
       where: {
-        slug,
+        id,
       },
     });
   }
 
-  async favoriteArticle(user: User, slug: string) {
+  async favoriteArticle(user: User, id: string) {
     const article = await this.prismaService.article.findUnique({
       where: {
-        slug,
+        id,
       },
       include: {
         favorited: true,
@@ -180,7 +180,7 @@ export class ArticleService {
 
     return await this.prismaService.article.update({
       where: {
-        slug,
+        id,
       },
       data: {
         favorited: { connect: { ...user } },
@@ -192,10 +192,10 @@ export class ArticleService {
     });
   }
 
-  async unfavoriteArticle(user: User, slug: string) {
+  async unfavoriteArticle(user: User, id: string) {
     const article = await this.prismaService.article.findUnique({
       where: {
-        slug,
+        id,
       },
       include: {
         favorited: true,
@@ -212,7 +212,7 @@ export class ArticleService {
 
     return await this.prismaService.article.update({
       where: {
-        slug,
+        id,
       },
       data: {
         favorited: { disconnect: { ...user } },
@@ -224,10 +224,10 @@ export class ArticleService {
     });
   }
 
-  private async findArticleBySlug(slug: string): Promise<Article> {
+  private async findArticleById(id: string): Promise<Article> {
     return this.prismaService.article.findUnique({
       where: {
-        slug,
+        id,
       },
     });
   }

@@ -34,9 +34,9 @@ export class ArticleController {
     return this.articleService.getAllArticles(queryDto);
   }
 
-  @Get(':slug')
-  async getSingleArticle(@Param('slug') slug: string): Promise<Article> {
-    return this.articleService.getSingleArticle(slug);
+  @Get(':id')
+  async getSingleArticle(@Param('id') id: string): Promise<Article> {
+    return this.articleService.getSingleArticle(id);
   }
 
   @Post()
@@ -56,12 +56,12 @@ export class ArticleController {
     return this.articleService.createArticle(id, dto, file);
   }
 
-  @Put(':slug')
+  @Put(':id')
   @UseGuards(JwtGuard)
   @UseInterceptors(FileInterceptor('image', { storage: articleStorage }))
   async updateArticle(
-    @CurrentUser('id') id: string,
-    @Param('slug') slug: string,
+    @CurrentUser('id') uid: string,
+    @Param('id') id: string,
     @Body() dto: UpdateArticleDto,
     @UploadedFile(
       new ParseFilePipe({
@@ -71,33 +71,27 @@ export class ArticleController {
     )
     file: Express.Multer.File,
   ): Promise<Article> {
-    return this.articleService.updateArticle(id, slug, dto, file);
+    return this.articleService.updateArticle(uid, id, dto, file);
   }
 
-  @Delete(':slug')
+  @Delete(':id')
   @UseGuards(JwtGuard)
   async deleteArticle(
-    @CurrentUser('id') id: string,
-    @Param('slug') slug: string,
+    @CurrentUser('id') uid: string,
+    @Param('id') id: string,
   ): Promise<void> {
-    return this.articleService.deleteArticle(id, slug);
+    return this.articleService.deleteArticle(uid, id);
   }
 
-  @Post(':slug/favorite')
+  @Post(':id/favorite')
   @UseGuards(JwtGuard)
-  async favoriteArticle(
-    @CurrentUser() user: User,
-    @Param('slug') slug: string,
-  ) {
-    return this.articleService.favoriteArticle(user, slug);
+  async favoriteArticle(@CurrentUser() user: User, @Param('id') id: string) {
+    return this.articleService.favoriteArticle(user, id);
   }
 
-  @Delete(':slug/favorite')
+  @Delete(':id/favorite')
   @UseGuards(JwtGuard)
-  async unfavoriteArticle(
-    @CurrentUser() user: User,
-    @Param('slug') slug: string,
-  ) {
-    return this.articleService.unfavoriteArticle(user, slug);
+  async unfavoriteArticle(@CurrentUser() user: User, @Param('id') id: string) {
+    return this.articleService.unfavoriteArticle(user, id);
   }
 }

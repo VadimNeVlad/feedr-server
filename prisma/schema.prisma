@@ -11,19 +11,22 @@ datasource db {
 }
 
 model User {
-  id        String    @id @default(uuid())
-  email     String    @unique
-  name      String
-  password  String
-  bio       String    @default("")
-  image     String    @default("")
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
-  articles  Article[] @relation("articles")
-  favorites Article[] @relation("favorites")
-  following Follow[]  @relation("follower")
-  followers Follow[]  @relation("following")
-  comments  Comment[]
+  id            String    @id @default(uuid())
+  email         String    @unique
+  name          String
+  password      String
+  bio           String    @default("")
+  image         String    @default("")
+  location      String    @default("")
+  websiteUrl    String    @default("") @map("website_url")
+  commentsCount Int       @default(0) @map("comments_count")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  articles      Article[] @relation("articles")
+  favorites     Article[] @relation("favorites")
+  following     Follow[]  @relation("follower")
+  followers     Follow[]  @relation("following")
+  comments      Comment[]
 
   @@map("users")
 }

@@ -39,6 +39,13 @@ export class ArticleController {
     return this.articleService.getSingleArticle(id);
   }
 
+  @Get('author/:authorId')
+  async getArticlesByAuthor(
+    @Param('authorId') authorId: string,
+  ): Promise<Article[]> {
+    return this.articleService.getArticlesByAuthor(authorId);
+  }
+
   @Post()
   @UseGuards(JwtGuard)
   @UseInterceptors(FileInterceptor('image', { storage: articleStorage }))

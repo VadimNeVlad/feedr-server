@@ -55,6 +55,14 @@ export class ArticleService {
     });
   }
 
+  async getArticlesByAuthor(authorId: string): Promise<Article[]> {
+    return await this.prismaService.article.findMany({
+      where: {
+        authorId,
+      },
+    });
+  }
+
   async getSingleArticle(id: string): Promise<Article> {
     const article = await this.findArticleById(id);
 

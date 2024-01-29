@@ -60,6 +60,10 @@ export class ArticleService {
       where: {
         authorId,
       },
+      include: this.articleIncludeOpts(),
+      orderBy: {
+        createdAt: 'desc',
+      },
     });
   }
 

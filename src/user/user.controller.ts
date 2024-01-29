@@ -9,6 +9,8 @@ import {
   Post,
   UseInterceptors,
   UploadedFile,
+  ParseFilePipe,
+  FileTypeValidator,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { JwtGuard } from 'src/auth/guards/jwt.guard';
@@ -54,7 +56,12 @@ export class UserController {
   @UseInterceptors(FileInterceptor('avatar', { storage: avatarStorage }))
   async updateAvatar(
     @CurrentUser('id') id: string,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [new FileTypeValidator({ fileType: 'image/*' })],
+      }),
+    )
+    file: Express.Multer.File,
   ): Promise<User> {
     return this.userService.updateAvatar(id, file);
   }

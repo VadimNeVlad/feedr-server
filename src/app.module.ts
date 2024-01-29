@@ -11,6 +11,7 @@ import { TagModule } from './tag/tag.module';
 import { CommentModule } from './comment/comment.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
+import { FollowModule } from './follow/follow.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { join } from 'path';
       rootPath: join(__dirname, '..', 'uploads'),
       exclude: ['/api/(.*)'],
     }),
+    FollowModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],

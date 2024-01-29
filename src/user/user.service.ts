@@ -140,25 +140,11 @@ export class UserService {
         followers: {
           select: {
             followerId: true,
-            follower: {
-              select: {
-                name: true,
-                bio: true,
-                image: true,
-              },
-            },
           },
         },
         following: {
           select: {
             followingId: true,
-            following: {
-              select: {
-                name: true,
-                bio: true,
-                image: true,
-              },
-            },
           },
         },
       },

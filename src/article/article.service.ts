@@ -256,7 +256,11 @@ export class ArticleService {
         },
       },
       tagList: true,
-      favorited: true,
+      favorited: {
+        select: {
+          id: true,
+        },
+      },
     };
   }
 }

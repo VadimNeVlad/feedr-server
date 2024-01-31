@@ -1,7 +1,8 @@
-import { Controller, Get, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { FollowService } from './follow.service';
 import { JwtGuard } from 'src/auth/guards/jwt.guard';
 import { Follow } from '@prisma/client';
+import { GetFollowsDto } from './dto/get-follows';
 
 @Controller()
 export class FollowController {
@@ -9,7 +10,10 @@ export class FollowController {
 
   @Get(':id/following')
   @UseGuards(JwtGuard)
-  async getFollowings(@Param('id') id: string): Promise<Follow[]> {
-    return this.followService.getFollowings(id);
+  async getFollowings(
+    @Query() queryDto: GetFollowsDto,
+    @Param('id') id: string,
+  ): Promise<Follow[]> {
+    return this.followService.getFollowings(queryDto, id);
   }
 }

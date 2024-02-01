@@ -11,7 +11,7 @@ export class FollowService {
     queryDto: GetFollowsDto,
     userId: string,
   ): Promise<Follow[]> {
-    const { per_page = 1 } = queryDto;
+    const { per_page = 100 } = queryDto;
 
     return await this.prismaService.follow.findMany({
       where: {
@@ -19,6 +19,36 @@ export class FollowService {
       },
       include: {
         following: {
+          select: {
+            id: true,
+            name: true,
+            bio: true,
+            image: true,
+            followers: {
+              select: {
+                followerId: true,
+                followingId: true,
+              },
+            },
+          },
+        },
+      },
+      take: +per_page,
+    });
+  }
+
+  async getFollowers(
+    queryDto: GetFollowsDto,
+    userId: string,
+  ): Promise<Follow[]> {
+    const { per_page = 100 } = queryDto;
+
+    return await this.prismaService.follow.findMany({
+      where: {
+        followingId: userId,
+      },
+      include: {
+        follower: {
           select: {
             id: true,
             name: true,

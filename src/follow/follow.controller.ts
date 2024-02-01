@@ -16,4 +16,13 @@ export class FollowController {
   ): Promise<Follow[]> {
     return this.followService.getFollowings(queryDto, id);
   }
+
+  @Get(':id/followers')
+  @UseGuards(JwtGuard)
+  async getFollowers(
+    @Query() queryDto: GetFollowsDto,
+    @Param('id') id: string,
+  ): Promise<Follow[]> {
+    return this.followService.getFollowers(queryDto, id);
+  }
 }

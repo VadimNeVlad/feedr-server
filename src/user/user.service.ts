@@ -1,13 +1,15 @@
 import {
   ConflictException,
+  HttpException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { hashSync } from 'bcrypt';
+import { compare, hashSync } from 'bcrypt';
 import { User } from '@prisma/client';
 import { Follow } from './interfaces/follow';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 @Injectable()
 export class UserService {
@@ -15,6 +17,7 @@ export class UserService {
 
   async getCurrentUser(id: string): Promise<User> {
     const user = await this.findUser(id);
+    delete user.password;
 
     if (!user) {
       throw new NotFoundException();
@@ -47,7 +50,6 @@ export class UserService {
       },
       data: {
         ...dto,
-        password: hashSync(dto.password, 10),
       },
     });
   }
@@ -63,6 +65,30 @@ export class UserService {
       },
       data: {
         image: file.filename,
+      },
+    });
+  }
+
+  async changePassword(id: string, dto: ChangePasswordDto): Promise<void> {
+    const { newPassword, currentPassword } = dto;
+    const user = await this.findUser(id);
+
+    if (!user) {
+      throw new Error();
+    }
+
+    const isPasswordCorrect = await compare(currentPassword, user.password);
+
+    if (!isPasswordCorrect) {
+      throw new HttpException('Invalid password', 400);
+    }
+
+    await this.prismaService.user.update({
+      where: {
+        id,
+      },
+      data: {
+        password: hashSync(newPassword, 10),
       },
     });
   }

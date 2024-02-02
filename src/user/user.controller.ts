@@ -20,6 +20,7 @@ import { User } from '@prisma/client';
 import { Follow } from './interfaces/follow';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { avatarStorage } from 'src/config/multer.config';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 @Controller('user')
 export class UserController {
@@ -45,12 +46,6 @@ export class UserController {
     return this.userService.updateCurrentUser(id, dto);
   }
 
-  @Delete()
-  @UseGuards(JwtGuard)
-  async deleteCurrentUser(@CurrentUser('id') id: string): Promise<void> {
-    return this.userService.deleteCurrentUser(id);
-  }
-
   @Put('update-avatar')
   @UseGuards(JwtGuard)
   @UseInterceptors(FileInterceptor('avatar', { storage: avatarStorage }))
@@ -64,6 +59,21 @@ export class UserController {
     file: Express.Multer.File,
   ): Promise<User> {
     return this.userService.updateAvatar(id, file);
+  }
+
+  @Put('change-password')
+  @UseGuards(JwtGuard)
+  async changePassword(
+    @CurrentUser('id') id: string,
+    @Body() dto: ChangePasswordDto,
+  ): Promise<void> {
+    return this.userService.changePassword(id, dto);
+  }
+
+  @Delete()
+  @UseGuards(JwtGuard)
+  async deleteCurrentUser(@CurrentUser('id') id: string): Promise<void> {
+    return this.userService.deleteCurrentUser(id);
   }
 
   @Post(':fuid/follow')

@@ -67,6 +67,20 @@ export class ArticleService {
     });
   }
 
+  async getArticlesByTag(tagName: string): Promise<Article[]> {
+    return await this.prismaService.article.findMany({
+      where: {
+        tagList: {
+          some: {
+            name: {
+              contains: tagName,
+            },
+          },
+        },
+      },
+    });
+  }
+
   async getSingleArticle(id: string): Promise<Article> {
     const article = await this.findArticleById(id);
 

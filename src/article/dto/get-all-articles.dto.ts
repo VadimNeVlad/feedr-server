@@ -1,9 +1,9 @@
 import { IsEnum, IsOptional, IsString } from 'class-validator';
 
 export enum ArticlesSort {
-  LATEST = 'Latest',
-  OLDEST = 'Oldest',
-  TOP = 'Top',
+  LATEST = 'latest',
+  OLDEST = 'oldest',
+  TOP = 'top',
 }
 
 export class GetAllArticlesDto {

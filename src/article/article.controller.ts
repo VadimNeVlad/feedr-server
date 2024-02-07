@@ -46,13 +46,6 @@ export class ArticleController {
     return this.articleService.getArticlesByAuthor(authorId);
   }
 
-  @Get('tag/:tagName')
-  async getArticlesByTag(
-    @Param('tagName') tagName: string,
-  ): Promise<Article[]> {
-    return this.articleService.getArticlesByTag(tagName);
-  }
-
   @Post()
   @UseGuards(JwtGuard)
   @UseInterceptors(FileInterceptor('image', { storage: articleStorage }))

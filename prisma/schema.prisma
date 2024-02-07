@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,41 +8,38 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(uuid())
-  email         String    @unique
-  name          String
-  password      String
-  bio           String    @default("")
-  image         String    @default("")
-  location      String    @default("")
-  websiteUrl    String    @default("") @map("website_url")
-  commentsCount Int       @default(0) @map("comments_count")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
-  articles      Article[] @relation("articles")
-  favorites     Article[] @relation("favorites")
-  following     Follow[]  @relation("follower")
-  followers     Follow[]  @relation("following")
-  comments      Comment[]
+  id         String    @id @default(uuid())
+  email      String    @unique
+  name       String
+  password   String
+  bio        String    @default("")
+  image      String    @default("")
+  location   String    @default("")
+  websiteUrl String    @default("") @map("website_url")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  articles   Article[] @relation("articles")
+  favorites  Article[] @relation("favorites")
+  following  Follow[]  @relation("follower")
+  followers  Follow[]  @relation("following")
+  comments   Comment[]
 
   @@map("users")
 }
 
 model Article {
-  id             String    @id @default(uuid())
-  slug           String    @unique
-  title          String
-  body           String    @default("")
-  image          String    @default("")
-  tagList        Tag[]
-  createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
-  favoritesCount Int       @default(0) @map("favorites_count")
-  author         User      @relation("articles", fields: [authorId], references: [id])
-  authorId       String    @map("author_id")
-  favorited      User[]    @relation("favorites")
-  commentsCount  Int       @default(0) @map("comments_count")
-  comments       Comment[]
+  id        String    @id @default(uuid())
+  slug      String    @unique
+  title     String
+  body      String    @default("")
+  image     String    @default("")
+  tagList   Tag[]
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  author    User      @relation("articles", fields: [authorId], references: [id])
+  authorId  String    @map("author_id")
+  favorited User[]    @relation("favorites")
+  comments  Comment[]
 
   @@map("articles")
 }

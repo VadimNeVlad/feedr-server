@@ -173,6 +173,12 @@ export class UserService {
             followingId: true,
           },
         },
+        _count: {
+          select: {
+            comments: true,
+            articles: true,
+          },
+        },
       },
     });
   }

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateTagsDto } from './dto/create-tags.dto';
-import { Prisma, Tag } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { TagsCount } from './interfaces/tags-count';
 import { GetTagsDto } from './dto/get-tags.dto';
 import { TagArticles } from './interfaces/tag-articles';
@@ -11,7 +11,7 @@ import { ArticlesSort } from 'src/article/dto/get-all-articles.dto';
 export class TagService {
   constructor(private readonly prismaService: PrismaService) {}
 
-  async getTags(queryDto: GetTagsDto): Promise<Tag[]> {
+  async getTags(queryDto: GetTagsDto): Promise<any> {
     const { per_page = 100, q } = queryDto;
 
     return await this.prismaService.tag.findMany({
@@ -21,6 +21,20 @@ export class TagService {
         },
       },
       take: +per_page,
+      select: {
+        name: true,
+        id: true,
+        _count: {
+          select: {
+            articles: true,
+          },
+        },
+      },
+      orderBy: {
+        articles: {
+          _count: 'desc',
+        },
+      },
     });
   }
 
@@ -33,7 +47,7 @@ export class TagService {
 
     switch (sort_by) {
       case ArticlesSort.TOP:
-        prismaSort.push({ favoritesCount: 'desc' });
+        prismaSort.push({ favorited: { _count: 'desc' } });
         break;
 
       case ArticlesSort.OLDEST:

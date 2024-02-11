@@ -30,7 +30,7 @@ export class ArticleController {
   @Get()
   async getAllArticles(
     @Query() queryDto: GetAllArticlesDto,
-  ): Promise<Article[]> {
+  ): Promise<{ articles: Article[]; _count: number }> {
     return this.articleService.getAllArticles(queryDto);
   }
 

@@ -15,13 +15,15 @@ import { ArticlesSort, GetAllArticlesDto } from './dto/get-all-articles.dto';
 export class ArticleService {
   constructor(private readonly prismaService: PrismaService) {}
 
-  async getAllArticles(queryDto: GetAllArticlesDto): Promise<Article[]> {
+  async getAllArticles(
+    queryDto: GetAllArticlesDto,
+  ): Promise<{ articles: Article[]; _count: number }> {
     const { sort_by, page = 0, per_page = 10 } = queryDto;
     const prismaSort: Prisma.ArticleOrderByWithRelationInput[] = [];
 
     switch (sort_by) {
       case ArticlesSort.TOP:
-        prismaSort.push({ favoritesCount: 'desc' });
+        prismaSort.push({ favorited: { _count: 'desc' } });
         break;
 
       case ArticlesSort.OLDEST:
@@ -33,12 +35,15 @@ export class ArticleService {
         break;
     }
 
-    return await this.prismaService.article.findMany({
+    const articlesCount = await this.prismaService.article.count();
+    const articles = await this.prismaService.article.findMany({
       skip: page * per_page,
       take: +per_page,
       include: this.articleIncludeOpts(),
       orderBy: prismaSort,
     });
+
+    return { articles, _count: articlesCount };
   }
 
   async getArticlesByAuthor(authorId: string): Promise<Article[]> {

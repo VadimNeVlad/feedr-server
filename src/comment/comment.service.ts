@@ -9,9 +9,7 @@ export class CommentService {
 
   async getComments(articleId: string): Promise<Comment[]> {
     return await this.prismaService.comment.findMany({
-      where: {
-        articleId,
-      },
+      where: { articleId },
       include: {
         author: {
           select: {

@@ -7,18 +7,17 @@ import { GetFollowsDto } from './dto/get-follows';
 export class FollowService {
   constructor(private readonly prismaService: PrismaService) {}
 
-  async getFollowings(
+  private async getFollows(
     queryDto: GetFollowsDto,
     userId: string,
+    isFollowing: boolean,
   ): Promise<Follow[]> {
     const { per_page = 100 } = queryDto;
 
-    return await this.prismaService.follow.findMany({
-      where: {
-        followerId: userId,
-      },
+    const follows = await this.prismaService.follow.findMany({
+      where: isFollowing ? { followerId: userId } : { followingId: userId },
       include: {
-        following: {
+        [isFollowing ? 'following' : 'follower']: {
           select: {
             id: true,
             name: true,
@@ -34,36 +33,23 @@ export class FollowService {
         },
       },
       take: +per_page,
+      orderBy: { createdAt: 'desc' },
     });
+
+    return follows;
+  }
+
+  async getFollowings(
+    queryDto: GetFollowsDto,
+    userId: string,
+  ): Promise<Follow[]> {
+    return await this.getFollows(queryDto, userId, true);
   }
 
   async getFollowers(
     queryDto: GetFollowsDto,
     userId: string,
   ): Promise<Follow[]> {
-    const { per_page = 100 } = queryDto;
-
-    return await this.prismaService.follow.findMany({
-      where: {
-        followingId: userId,
-      },
-      include: {
-        follower: {
-          select: {
-            id: true,
-            name: true,
-            bio: true,
-            image: true,
-            followers: {
-              select: {
-                followerId: true,
-                followingId: true,
-              },
-            },
-          },
-        },
-      },
-      take: +per_page,
-    });
+    return await this.getFollows(queryDto, userId, false);
   }
 }

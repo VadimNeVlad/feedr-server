@@ -145,9 +145,7 @@ export class ArticleService {
     }
 
     await this.prismaService.comment.deleteMany({
-      where: {
-        articleId: article.id,
-      },
+      where: { articleId: article.id },
     });
 
     await this.prismaService.article.delete({

@@ -53,10 +53,11 @@ model Tag {
 }
 
 model Follow {
-  follower    User?  @relation("follower", fields: [followerId], references: [id])
-  followerId  String @map("follower_id")
-  following   User?  @relation("following", fields: [followingId], references: [id])
-  followingId String @map("following_id")
+  follower    User?    @relation("follower", fields: [followerId], references: [id])
+  followerId  String   @map("follower_id")
+  following   User?    @relation("following", fields: [followingId], references: [id])
+  followingId String   @map("following_id")
+  createdAt   DateTime @default(now()) @map("created_at")
 
   @@id([followerId, followingId])
 }

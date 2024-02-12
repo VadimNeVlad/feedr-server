@@ -24,14 +24,12 @@ export class AuthService {
   async register(dto: RegisterDto): Promise<AuthResponse> {
     const { email, name, password } = dto;
 
-    const userExist = await this.prismaService.user.findUnique({
-      where: {
-        email,
-      },
+    const existingUser = await this.prismaService.user.findUnique({
+      where: { email },
       include: this.authIncludeOpts(),
     });
 
-    if (userExist) {
+    if (existingUser) {
       throw new ConflictException(
         'User with this email address already exists',
       );
@@ -48,19 +46,14 @@ export class AuthService {
 
     const tokens = await this.generateTokens(user);
 
-    return {
-      user,
-      ...tokens,
-    };
+    return { user, ...tokens };
   }
 
   async login(dto: LoginDto): Promise<AuthResponse> {
     const { email, password } = dto;
 
     const user = await this.prismaService.user.findUnique({
-      where: {
-        email,
-      },
+      where: { email },
       include: this.authIncludeOpts(),
     });
 
@@ -90,9 +83,7 @@ export class AuthService {
     }
 
     const user = await this.prismaService.user.findUnique({
-      where: {
-        email: result.email,
-      },
+      where: { email: result.email },
     });
 
     const tokens = await this.generateTokens(user);

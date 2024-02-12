@@ -1,6 +1,7 @@
 import {
+  BadRequestException,
   ConflictException,
-  HttpException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -18,39 +19,19 @@ export class UserService {
   async getCurrentUser(id: string): Promise<User> {
     const user = await this.findUser(id);
     delete user.password;
-
-    if (!user) {
-      throw new NotFoundException();
-    }
-
     return user;
   }
 
   async getUserById(id: string): Promise<User> {
     const user = await this.findUser(id);
     delete user.password;
-
-    if (!user) {
-      throw new NotFoundException();
-    }
-
     return user;
   }
 
   async updateCurrentUser(id: string, dto: UpdateUserDto): Promise<User> {
-    const user = await this.findUser(id);
-
-    if (!user) {
-      throw new NotFoundException();
-    }
-
-    return this.prismaService.user.update({
-      where: {
-        id,
-      },
-      data: {
-        ...dto,
-      },
+    return await this.prismaService.user.update({
+      where: { id },
+      data: { ...dto },
     });
   }
 
@@ -60,12 +41,8 @@ export class UserService {
     }
 
     return await this.prismaService.user.update({
-      where: {
-        id,
-      },
-      data: {
-        image: file.filename,
-      },
+      where: { id },
+      data: { image: file.filename },
     });
   }
 
@@ -73,31 +50,23 @@ export class UserService {
     const { newPassword, currentPassword } = dto;
     const user = await this.findUser(id);
 
-    if (!user) {
-      throw new Error();
-    }
-
     const isPasswordCorrect = await compare(currentPassword, user.password);
 
     if (!isPasswordCorrect) {
-      throw new HttpException('Invalid password', 400);
+      throw new BadRequestException('Invalid password');
     }
 
     await this.prismaService.user.update({
-      where: {
-        id,
-      },
-      data: {
-        password: hashSync(newPassword, 10),
-      },
+      where: { id },
+      data: { password: hashSync(newPassword, 10) },
     });
   }
 
   async deleteCurrentUser(id: string): Promise<void> {
     const user = await this.findUser(id);
 
-    if (!user) {
-      throw new NotFoundException();
+    if (user.id !== id) {
+      throw new ForbiddenException('You are not allowed to delete this user');
     }
 
     await this.prismaService.user.delete({
@@ -113,9 +82,7 @@ export class UserService {
     }
 
     const followingUser = await this.prismaService.user.findUnique({
-      where: {
-        id: fuid,
-      },
+      where: { id: fuid },
       include: {
         followers: true,
         following: true,
@@ -140,25 +107,25 @@ export class UserService {
 
   async unfollowUser(id: string, fuid: string): Promise<{ count: number }> {
     const followingUser = await this.prismaService.user.findUnique({
-      where: {
-        id: fuid,
-      },
+      where: { id: fuid },
       include: {
         followers: true,
         following: true,
       },
     });
 
-    return await this.prismaService.follow.deleteMany({
+    const deleteResult = await this.prismaService.follow.deleteMany({
       where: {
         followerId: id,
         followingId: followingUser.id,
       },
     });
+
+    return { count: deleteResult.count };
   }
 
   private async findUser(id: string): Promise<User> {
-    return await this.prismaService.user.findUnique({
+    const user = await this.prismaService.user.findUnique({
       where: {
         id,
       },
@@ -181,5 +148,11 @@ export class UserService {
         },
       },
     });
+
+    if (!user) {
+      throw new NotFoundException();
+    }
+
+    return user;
   }
 }

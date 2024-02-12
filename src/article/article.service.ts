@@ -9,68 +9,70 @@ import { CreateArticleDto } from './dto/create-article.dto';
 import slugify from 'slugify';
 import { Article, Prisma, Tag, User } from '@prisma/client';
 import { UpdateArticleDto } from './dto/update-article.dto';
-import { ArticlesSort, GetAllArticlesDto } from './dto/get-all-articles.dto';
+import {
+  ArticlesSort,
+  GetArticlesQueryParamsDto,
+} from './dto/get-articles-query-params.dto';
+import { ArticleData } from './interfaces/article-data';
 
 @Injectable()
 export class ArticleService {
   constructor(private readonly prismaService: PrismaService) {}
 
   async getAllArticles(
-    queryDto: GetAllArticlesDto,
-  ): Promise<{ articles: Article[]; _count: number }> {
-    const { sort_by, page = 0, per_page = 10 } = queryDto;
-    const prismaSort: Prisma.ArticleOrderByWithRelationInput[] = [];
+    queryDto: GetArticlesQueryParamsDto,
+  ): Promise<ArticleData> {
+    const { sort_by, page = 0, per_page = 10, q } = queryDto;
+    const where: Prisma.ArticleWhereInput = {
+      title: {
+        contains: q,
+        mode: 'insensitive',
+      },
+    };
 
-    switch (sort_by) {
-      case ArticlesSort.TOP:
-        prismaSort.push({ favorited: { _count: 'desc' } });
-        break;
+    const orderBy: Prisma.ArticleOrderByWithRelationInput =
+      this.getOrderBy(sort_by);
 
-      case ArticlesSort.OLDEST:
-        prismaSort.push({ createdAt: 'asc' });
-        break;
-
-      default:
-        prismaSort.push({ createdAt: 'desc' });
-        break;
-    }
-
-    const articlesCount = await this.prismaService.article.count();
-    const articles = await this.prismaService.article.findMany({
-      skip: page * per_page,
-      take: +per_page,
-      include: this.articleIncludeOpts(),
-      orderBy: prismaSort,
-    });
+    const [articles, articlesCount] = await Promise.all([
+      this.prismaService.article.findMany({
+        where,
+        skip: page * per_page,
+        take: +per_page,
+        include: this.articleIncludeOpts(),
+        orderBy,
+      }),
+      this.prismaService.article.count({ where }),
+    ]);
 
     return { articles, _count: articlesCount };
   }
 
-  async getArticlesByAuthor(authorId: string): Promise<Article[]> {
-    return await this.prismaService.article.findMany({
-      where: {
-        authorId,
-      },
-      include: this.articleIncludeOpts(),
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+  async getArticlesByAuthor(
+    authorId: string,
+    queryDto: GetArticlesQueryParamsDto,
+  ): Promise<ArticleData> {
+    const { page = 0, per_page = 10 } = queryDto;
+    const where: Prisma.ArticleWhereInput = {
+      authorId,
+    };
+
+    const [articles, articlesCount] = await Promise.all([
+      this.prismaService.article.findMany({
+        where,
+        skip: page * per_page,
+        take: +per_page,
+        include: this.articleIncludeOpts(),
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prismaService.article.count({ where }),
+    ]);
+
+    return { articles, _count: articlesCount };
   }
 
   async getSingleArticle(id: string): Promise<Article> {
     const article = await this.findArticleById(id);
-
-    if (!article) {
-      throw new NotFoundException('Article does not exist');
-    }
-
-    return await this.prismaService.article.findUnique({
-      where: {
-        id,
-      },
-      include: this.articleIncludeOpts(),
-    });
+    return article;
   }
 
   async createArticle(
@@ -79,20 +81,20 @@ export class ArticleService {
     file: Express.Multer.File,
   ) {
     const tagList = JSON.parse(dto.tagList);
-    const article = await this.prismaService.article.findUnique({
-      where: {
-        slug: slugify(dto.title, { lower: true }),
-      },
+    const slug = slugify(dto.title, { lower: true });
+
+    const existingArticle = await this.prismaService.article.findUnique({
+      where: { slug },
     });
 
-    if (article) {
+    if (existingArticle) {
       throw new ConflictException('Article with this title already exists');
     }
 
     return await this.prismaService.article.create({
       data: {
         ...dto,
-        slug: slugify(dto.title, { lower: true }),
+        slug: slug,
         image: file ? file.filename : '',
         tagList: {
           connectOrCreate: tagList.map((tag: Tag) => ({
@@ -118,10 +120,6 @@ export class ArticleService {
   ): Promise<Article> {
     const article = await this.findArticleById(id);
 
-    if (!article) {
-      throw new NotFoundException('Article does not exist');
-    }
-
     if (article.authorId !== uid) {
       throw new ForbiddenException('You are not allowed to update this post');
     }
@@ -142,10 +140,6 @@ export class ArticleService {
   async deleteArticle(uid: string, id: string): Promise<void> {
     const article = await this.findArticleById(id);
 
-    if (!article) {
-      throw new NotFoundException('Article does not exist');
-    }
-
     if (article.authorId !== uid) {
       throw new ForbiddenException('You are not allowed to delete this post');
     }
@@ -157,62 +151,50 @@ export class ArticleService {
     });
 
     await this.prismaService.article.delete({
-      where: {
-        id,
-      },
+      where: { id },
     });
   }
 
   async favoriteArticle(user: User, id: string) {
-    const article = await this.prismaService.article.findUnique({
-      where: {
-        id,
-      },
-    });
-
-    if (!article) {
-      throw new NotFoundException('Article does not exist');
-    }
-
     return await this.prismaService.article.update({
-      where: {
-        id,
-      },
-      data: {
-        favorited: { connect: { ...user } },
-      },
+      where: { id },
+      data: { favorited: { connect: { ...user } } },
       include: this.articleIncludeOpts(),
     });
   }
 
   async unfavoriteArticle(user: User, id: string) {
+    return await this.prismaService.article.update({
+      where: { id },
+      data: { favorited: { disconnect: { ...user } } },
+      include: this.articleIncludeOpts(),
+    });
+  }
+
+  private async findArticleById(id: string): Promise<Article> {
     const article = await this.prismaService.article.findUnique({
-      where: {
-        id,
-      },
+      where: { id },
+      include: this.articleIncludeOpts(),
     });
 
     if (!article) {
       throw new NotFoundException('Article does not exist');
     }
 
-    return await this.prismaService.article.update({
-      where: {
-        id,
-      },
-      data: {
-        favorited: { disconnect: { ...user } },
-      },
-      include: this.articleIncludeOpts(),
-    });
+    return article;
   }
 
-  private async findArticleById(id: string): Promise<Article> {
-    return this.prismaService.article.findUnique({
-      where: {
-        id,
-      },
-    });
+  private getOrderBy(
+    sortBy: ArticlesSort,
+  ): Prisma.ArticleOrderByWithRelationInput {
+    switch (sortBy) {
+      case ArticlesSort.TOP:
+        return { favorited: { _count: 'desc' } };
+      case ArticlesSort.OLDEST:
+        return { createdAt: 'asc' };
+      default:
+        return { createdAt: 'desc' };
+    }
   }
 
   private articleIncludeOpts() {

@@ -19,9 +19,10 @@ import { CurrentUser } from 'src/user/decorators/current-user.decorator';
 import { CreateArticleDto } from './dto/create-article.dto';
 import { Article, User } from '@prisma/client';
 import { UpdateArticleDto } from './dto/update-article.dto';
-import { GetAllArticlesDto } from './dto/get-all-articles.dto';
+import { GetArticlesQueryParamsDto } from './dto/get-articles-query-params.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { articleStorage } from '../config/multer.config';
+import { ArticleData } from './interfaces/article-data';
 
 @Controller('articles')
 export class ArticleController {
@@ -29,8 +30,8 @@ export class ArticleController {
 
   @Get()
   async getAllArticles(
-    @Query() queryDto: GetAllArticlesDto,
-  ): Promise<{ articles: Article[]; _count: number }> {
+    @Query() queryDto: GetArticlesQueryParamsDto,
+  ): Promise<ArticleData> {
     return this.articleService.getAllArticles(queryDto);
   }
 
@@ -42,8 +43,9 @@ export class ArticleController {
   @Get('author/:authorId')
   async getArticlesByAuthor(
     @Param('authorId') authorId: string,
-  ): Promise<Article[]> {
-    return this.articleService.getArticlesByAuthor(authorId);
+    @Query() queryDto: GetArticlesQueryParamsDto,
+  ): Promise<ArticleData> {
+    return this.articleService.getArticlesByAuthor(authorId, queryDto);
   }
 
   @Post()

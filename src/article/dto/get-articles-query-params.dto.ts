@@ -6,18 +6,14 @@ export enum ArticlesSort {
   TOP = 'top',
 }
 
-export class GetAllArticlesDto {
+export class GetArticlesQueryParamsDto {
+  @IsOptional()
+  @IsString()
+  q?: string;
+
   @IsOptional()
   @IsEnum(ArticlesSort)
   sort_by?: ArticlesSort;
-
-  @IsOptional()
-  @IsString()
-  author?: string;
-
-  @IsOptional()
-  @IsString()
-  tag?: string;
 
   @IsOptional()
   @IsString()

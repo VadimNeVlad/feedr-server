@@ -1,5 +1,5 @@
 import { IsEnum, IsOptional, IsString } from 'class-validator';
-import { ArticlesSort } from 'src/article/dto/get-all-articles.dto';
+import { ArticlesSort } from 'src/article/dto/get-articles-query-params.dto';
 
 export class GetTagsDto {
   @IsOptional()

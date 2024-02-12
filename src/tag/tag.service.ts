@@ -5,7 +5,7 @@ import { Prisma } from '@prisma/client';
 import { TagsCount } from './interfaces/tags-count';
 import { GetTagsDto } from './dto/get-tags.dto';
 import { TagArticles } from './interfaces/tag-articles';
-import { ArticlesSort } from 'src/article/dto/get-all-articles.dto';
+import { ArticlesSort } from 'src/article/dto/get-articles-query-params.dto';
 
 @Injectable()
 export class TagService {

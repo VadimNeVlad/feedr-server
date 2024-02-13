@@ -48,6 +48,12 @@ export class ArticleController {
     return this.articleService.getArticlesByAuthor(authorId, queryDto);
   }
 
+  @Get('user/reading-list')
+  @UseGuards(JwtGuard)
+  async getReadingList(@CurrentUser('id') uid: string): Promise<ArticleData> {
+    return this.articleService.getReadingList(uid);
+  }
+
   @Post()
   @UseGuards(JwtGuard)
   @UseInterceptors(FileInterceptor('image', { storage: articleStorage }))

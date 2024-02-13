@@ -70,6 +70,23 @@ export class ArticleService {
     return { articles, _count: articlesCount };
   }
 
+  async getReadingList(uid: string): Promise<ArticleData> {
+    const where: Prisma.ArticleWhereInput = {
+      favorited: { some: { id: uid } },
+    };
+
+    const [articles, articlesCount] = await Promise.all([
+      this.prismaService.article.findMany({
+        where,
+        include: this.articleIncludeOpts(),
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prismaService.article.count({ where }),
+    ]);
+
+    return { articles, _count: articlesCount };
+  }
+
   async getSingleArticle(id: string): Promise<Article> {
     const article = await this.findArticleById(id);
     return article;
@@ -199,6 +216,7 @@ export class ArticleService {
     return {
       author: {
         select: {
+          id: true,
           name: true,
           email: true,
           bio: true,

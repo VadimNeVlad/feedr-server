@@ -23,7 +23,7 @@ import { FollowModule } from './follow/follow.module';
     TagModule,
     CommentModule,
     ServeStaticModule.forRoot({
-      rootPath: join(__dirname, '..', 'tmp/uploads'),
+      rootPath: join(__dirname, '..', 'tmp'),
       exclude: ['/api/(.*)'],
     }),
     FollowModule,

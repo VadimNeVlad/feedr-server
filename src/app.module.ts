@@ -24,7 +24,6 @@ import { FollowModule } from './follow/follow.module';
     CommentModule,
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'uploads'),
-      exclude: ['/api/(.*)'],
     }),
     FollowModule,
   ],

@@ -11,10 +11,14 @@ import { compare, hashSync } from 'bcrypt';
 import { User } from '@prisma/client';
 import { Follow } from './interfaces/follow';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 
 @Injectable()
 export class UserService {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly cloudinaryService: CloudinaryService,
+  ) {}
 
   async getCurrentUser(id: string): Promise<User> {
     const user = await this.findUser(id);
@@ -40,9 +44,11 @@ export class UserService {
       throw new NotFoundException();
     }
 
+    const image = await this.cloudinaryService.uploadImage(file);
+
     return await this.prismaService.user.update({
       where: { id },
-      data: { image: file.filename },
+      data: { image: image.secure_url },
     });
   }
 

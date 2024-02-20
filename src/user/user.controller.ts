@@ -19,7 +19,6 @@ import { CurrentUser } from './decorators/current-user.decorator';
 import { User } from '@prisma/client';
 import { Follow } from './interfaces/follow';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { avatarStorage } from 'src/config/multer.config';
 import { ChangePasswordDto } from './dto/change-password.dto';
 
 @Controller('user')
@@ -48,7 +47,7 @@ export class UserController {
 
   @Put('update-avatar')
   @UseGuards(JwtGuard)
-  @UseInterceptors(FileInterceptor('avatar', { storage: avatarStorage }))
+  @UseInterceptors(FileInterceptor('avatar'))
   async updateAvatar(
     @CurrentUser('id') id: string,
     @UploadedFile(

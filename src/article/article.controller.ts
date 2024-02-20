@@ -21,7 +21,6 @@ import { Article, User } from '@prisma/client';
 import { UpdateArticleDto } from './dto/update-article.dto';
 import { GetArticlesQueryParamsDto } from './dto/get-articles-query-params.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { articleStorage } from '../config/multer.config';
 import { ArticleData } from './interfaces/article-data';
 
 @Controller('articles')
@@ -56,7 +55,7 @@ export class ArticleController {
 
   @Post()
   @UseGuards(JwtGuard)
-  @UseInterceptors(FileInterceptor('image', { storage: articleStorage }))
+  @UseInterceptors(FileInterceptor('image'))
   async createArticle(
     @CurrentUser('id') id: string,
     @Body() dto: CreateArticleDto,
@@ -73,7 +72,7 @@ export class ArticleController {
 
   @Put(':id')
   @UseGuards(JwtGuard)
-  @UseInterceptors(FileInterceptor('image', { storage: articleStorage }))
+  @UseInterceptors(FileInterceptor('image'))
   async updateArticle(
     @CurrentUser('id') uid: string,
     @Param('id') id: string,

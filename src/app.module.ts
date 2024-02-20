@@ -9,9 +9,8 @@ import { UserModule } from './user/user.module';
 import { ArticleModule } from './article/article.module';
 import { TagModule } from './tag/tag.module';
 import { CommentModule } from './comment/comment.module';
-import { ServeStaticModule } from '@nestjs/serve-static';
-import { join } from 'path';
 import { FollowModule } from './follow/follow.module';
+import { CloudinaryModule } from './cloudinary/cloudinary.module';
 
 @Module({
   imports: [
@@ -22,11 +21,8 @@ import { FollowModule } from './follow/follow.module';
     ArticleModule,
     TagModule,
     CommentModule,
-    ServeStaticModule.forRoot({
-      rootPath: join(__dirname, '..', 'tmp'),
-      exclude: ['/api/(.*)'],
-    }),
     FollowModule,
+    CloudinaryModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],

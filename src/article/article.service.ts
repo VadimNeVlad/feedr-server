@@ -14,10 +14,14 @@ import {
   GetArticlesQueryParamsDto,
 } from './dto/get-articles-query-params.dto';
 import { ArticleData } from './interfaces/article-data';
+import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 
 @Injectable()
 export class ArticleService {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly cloudinaryService: CloudinaryService,
+  ) {}
 
   async getAllArticles(
     queryDto: GetArticlesQueryParamsDto,
@@ -108,11 +112,13 @@ export class ArticleService {
       throw new ConflictException('Article with this title already exists');
     }
 
+    const image = file ? await this.cloudinaryService.uploadImage(file) : '';
+
     return await this.prismaService.article.create({
       data: {
         ...dto,
         slug: slug,
-        image: file ? file.filename : '',
+        image: image && image.secure_url,
         tagList: {
           connectOrCreate: tagList.map((tag: Tag) => ({
             where: {
@@ -141,6 +147,8 @@ export class ArticleService {
       throw new ForbiddenException('You are not allowed to update this post');
     }
 
+    const image = file ? await this.cloudinaryService.uploadImage(file) : '';
+
     return await this.prismaService.article.update({
       where: {
         id,
@@ -148,7 +156,7 @@ export class ArticleService {
       data: {
         ...dto,
         slug: slugify(dto.title, { lower: true }),
-        image: file ? file.filename : '',
+        image: image && image.secure_url,
       },
       include: this.articleIncludeOpts(),
     });

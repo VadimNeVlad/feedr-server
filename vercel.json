@@ -1,6 +1,11 @@
 {
   "version": 2,
-  "builds": [],
+  "builds": [
+    {
+      "src": "dist/main.js",
+      "use": "@now/node-server"
+    }
+  ],
   "routes": [
     {
       "src": "/(.*)",

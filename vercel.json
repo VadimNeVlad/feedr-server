@@ -1,14 +1,8 @@
 {
   "version": 2,
   "builds": [
-    {
-      "src": "package.json",
-      "use": "vercel-sapper"
-    },
-    {
-      "src": "src/main.ts",
-      "use": "@vercel/node"
-    }
+    { "src": "prisma/schema.prisma", "use": "@prisma/cli" },
+    { "src": "src/main.ts", "use": "@vercel/node" }
   ],
   "routes": [
     {

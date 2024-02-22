@@ -141,13 +141,14 @@ export class ArticleService {
     dto: UpdateArticleDto,
     file: Express.Multer.File,
   ): Promise<Article> {
+    const { title, image } = dto;
     const article = await this.findArticleById(id);
 
     if (article.authorId !== uid) {
       throw new ForbiddenException('You are not allowed to update this post');
     }
 
-    const image = file ? await this.cloudinaryService.uploadImage(file) : '';
+    const imageURL = file ? await this.cloudinaryService.uploadImage(file) : '';
 
     return await this.prismaService.article.update({
       where: {
@@ -155,8 +156,8 @@ export class ArticleService {
       },
       data: {
         ...dto,
-        slug: slugify(dto.title, { lower: true }),
-        image: image && image.secure_url,
+        slug: slugify(title, { lower: true }),
+        image: image || (imageURL && imageURL.secure_url),
       },
       include: this.articleIncludeOpts(),
     });

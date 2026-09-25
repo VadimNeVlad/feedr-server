@@ -3,7 +3,9 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ConfigService } from '@nestjs/config';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { User } from '@prisma/client';
+import { Token } from '../interfaces/token';
+import { AuthenticatedUser } from '../interfaces/authenticated-user';
+import { getJwtSecret } from '../config/jwt-secrets';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -14,13 +16,20 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: configService.get('JWT_SECRET'),
+      secretOrKey: getJwtSecret(configService, 'access'),
+      issuer: 'feeds-backend',
+      audience: 'feeds-api',
     });
   }
 
-  async validate({ id }: Pick<User, 'id'>): Promise<User> {
+  async validate(payload: Token): Promise<AuthenticatedUser> {
+    if (payload.type !== 'access' || !payload.sub) {
+      throw new UnauthorizedException('Invalid access token');
+    }
+
     const user = await this.prismaService.user.findUnique({
-      where: { id },
+      where: { id: payload.sub },
+      select: { id: true, email: true },
     });
 
     if (!user) {

@@ -1,17 +1,23 @@
 import {
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { compare, hashSync } from 'bcrypt';
-import { User } from '@prisma/client';
+import { compare, hash } from 'bcrypt';
 import { Follow } from './interfaces/follow';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
+import {
+  PrivateUser,
+  PublicUser,
+  privateUserProfileSelect,
+  privateUserSelect,
+  publicUserProfileSelect,
+} from './user.select';
+import { UploadedFile } from 'src/common/interfaces/uploaded-file';
 
 @Injectable()
 export class UserService {
@@ -20,41 +26,57 @@ export class UserService {
     private readonly cloudinaryService: CloudinaryService,
   ) {}
 
-  async getCurrentUser(id: string): Promise<User> {
-    const user = await this.findUser(id);
-    delete user.password;
-    return user;
+  async getCurrentUser(id: string): Promise<PrivateUser> {
+    return this.findUser(id, true);
   }
 
-  async getUserById(id: string): Promise<User> {
-    const user = await this.findUser(id);
-    delete user.password;
-    return user;
+  async getUserById(id: string): Promise<PublicUser> {
+    return this.findUser(id, false);
   }
 
-  async updateCurrentUser(id: string, dto: UpdateUserDto): Promise<User> {
+  async updateCurrentUser(id: string, dto: UpdateUserDto) {
+    const { name, websiteUrl, location, bio } = dto;
+
     return await this.prismaService.user.update({
       where: { id },
-      data: { ...dto },
+      data: { name, websiteUrl, location, bio },
+      select: privateUserSelect,
     });
   }
 
-  async updateAvatar(id: string, file: Express.Multer.File): Promise<User> {
+  async updateAvatar(id: string, file: UploadedFile) {
     if (!file) {
       throw new NotFoundException();
     }
 
+    const currentUser = await this.prismaService.user.findUnique({
+      where: { id },
+      select: { image: true },
+    });
+    if (!currentUser) throw new NotFoundException('User does not exist');
+
     const image = await this.cloudinaryService.uploadImage(file);
 
-    return await this.prismaService.user.update({
+    const updatedUser = await this.prismaService.user.update({
       where: { id },
       data: { image: image.secure_url },
+      select: privateUserSelect,
     });
+
+    await this.cloudinaryService.deleteImageByUrl(currentUser.image);
+    return updatedUser;
   }
 
   async changePassword(id: string, dto: ChangePasswordDto): Promise<void> {
     const { newPassword, currentPassword } = dto;
-    const user = await this.findUser(id);
+    const user = await this.prismaService.user.findUnique({
+      where: { id },
+      select: { password: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User does not exist');
+    }
 
     const isPasswordCorrect = await compare(currentPassword, user.password);
 
@@ -64,22 +86,36 @@ export class UserService {
 
     await this.prismaService.user.update({
       where: { id },
-      data: { password: hashSync(newPassword, 10) },
+      data: {
+        password: await hash(newPassword, 12),
+        refreshTokenHash: null,
+      },
     });
   }
 
   async deleteCurrentUser(id: string): Promise<void> {
-    const user = await this.findUser(id);
+    await this.findUser(id, true);
 
-    if (user.id !== id) {
-      throw new ForbiddenException('You are not allowed to delete this user');
-    }
+    const images = await this.prismaService.user.findUnique({
+      where: { id },
+      select: {
+        image: true,
+        articles: { select: { image: true } },
+      },
+    });
 
     await this.prismaService.user.delete({
       where: {
         id,
       },
     });
+
+    await Promise.all([
+      this.cloudinaryService.deleteImageByUrl(images?.image),
+      ...(images?.articles.map((article) =>
+        this.cloudinaryService.deleteImageByUrl(article.image),
+      ) ?? []),
+    ]);
   }
 
   async followUser(id: string, fuid: string): Promise<Follow> {
@@ -89,18 +125,11 @@ export class UserService {
 
     const followingUser = await this.prismaService.user.findUnique({
       where: { id: fuid },
-      include: {
-        followers: true,
-        following: true,
-      },
+      select: { id: true },
     });
 
-    const isFollowed = followingUser.followers.some(
-      (follower) => follower.followerId === id,
-    );
-
-    if (isFollowed) {
-      throw new ConflictException('You have already follow this user');
+    if (!followingUser) {
+      throw new NotFoundException('User does not exist');
     }
 
     return await this.prismaService.follow.create({
@@ -114,11 +143,12 @@ export class UserService {
   async unfollowUser(id: string, fuid: string): Promise<{ count: number }> {
     const followingUser = await this.prismaService.user.findUnique({
       where: { id: fuid },
-      include: {
-        followers: true,
-        following: true,
-      },
+      select: { id: true },
     });
+
+    if (!followingUser) {
+      throw new NotFoundException('User does not exist');
+    }
 
     const deleteResult = await this.prismaService.follow.deleteMany({
       where: {
@@ -130,29 +160,25 @@ export class UserService {
     return { count: deleteResult.count };
   }
 
-  private async findUser(id: string): Promise<User> {
+  private async findUser(
+    id: string,
+    includePrivateData: true,
+  ): Promise<PrivateUser>;
+  private async findUser(
+    id: string,
+    includePrivateData: false,
+  ): Promise<PublicUser>;
+  private async findUser(
+    id: string,
+    includePrivateData: boolean,
+  ): Promise<PrivateUser | PublicUser> {
     const user = await this.prismaService.user.findUnique({
       where: {
         id,
       },
-      include: {
-        followers: {
-          select: {
-            followerId: true,
-          },
-        },
-        following: {
-          select: {
-            followingId: true,
-          },
-        },
-        _count: {
-          select: {
-            comments: true,
-            articles: true,
-          },
-        },
-      },
+      select: includePrivateData
+        ? privateUserProfileSelect
+        : publicUserProfileSelect,
     });
 
     if (!user) {

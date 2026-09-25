@@ -12,7 +12,7 @@ export class FollowService {
     userId: string,
     isFollowing: boolean,
   ): Promise<Follow[]> {
-    const { per_page = 100 } = queryDto;
+    const { page = 0, per_page = 20 } = queryDto;
 
     const follows = await this.prismaService.follow.findMany({
       where: isFollowing ? { followerId: userId } : { followingId: userId },
@@ -23,16 +23,17 @@ export class FollowService {
             name: true,
             bio: true,
             image: true,
-            followers: {
+            _count: {
               select: {
-                followerId: true,
-                followingId: true,
+                followers: true,
+                following: true,
               },
             },
           },
         },
       },
-      take: +per_page,
+      skip: page * per_page,
+      take: per_page,
       orderBy: { createdAt: 'desc' },
     });
 

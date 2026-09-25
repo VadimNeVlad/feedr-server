@@ -1,32 +1,35 @@
 import {
-  Injectable,
   ConflictException,
-  HttpException,
+  Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
-import { RegisterDto } from './dto/register.dto';
-import { LoginDto } from './dto/login.dto';
-import { compare, hashSync } from 'bcrypt';
-import { User } from '@prisma/client';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import { User } from '@prisma/client';
+import { compare, hash } from 'bcrypt';
+import { createHash, randomUUID, timingSafeEqual } from 'crypto';
+import { PrismaService } from 'src/prisma/prisma.service';
+import { authUserSelect } from './auth.select';
+import { getJwtSecret } from './config/jwt-secrets';
+import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
-import { Token, Tokens } from './interfaces/token';
+import { RegisterDto } from './dto/register.dto';
 import { AuthResponse } from './interfaces/auth';
+import { Token, Tokens } from './interfaces/token';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
   ) {}
 
   async register(dto: RegisterDto): Promise<AuthResponse> {
-    const { email, name, password } = dto;
-
+    const email = this.normalizeEmail(dto.email);
     const existingUser = await this.prismaService.user.findUnique({
       where: { email },
-      include: this.authIncludeOpts(),
+      select: { id: true },
     });
 
     if (existingUser) {
@@ -38,86 +41,123 @@ export class AuthService {
     const user = await this.prismaService.user.create({
       data: {
         email,
-        name,
-        password: this.hashPassword(password),
+        name: dto.name,
+        password: await hash(dto.password, 12),
       },
-      include: this.authIncludeOpts(),
+      select: authUserSelect,
     });
-
     const tokens = await this.generateTokens(user);
 
     return { user, ...tokens };
   }
 
   async login(dto: LoginDto): Promise<AuthResponse> {
-    const { email, password } = dto;
-
     const user = await this.prismaService.user.findUnique({
-      where: { email },
-      include: this.authIncludeOpts(),
+      where: { email: this.normalizeEmail(dto.email) },
+      select: { id: true, email: true, password: true },
     });
 
-    if (!user) {
-      throw new HttpException('Invalid email or password', 400);
-    }
-
-    const isPasswordCorrect = await compare(password, user.password);
-
-    if (!isPasswordCorrect) {
-      throw new HttpException('Invalid email or password', 400);
+    if (!user || !(await compare(dto.password, user.password))) {
+      throw new UnauthorizedException('Invalid email or password');
     }
 
     const tokens = await this.generateTokens(user);
-
-    return {
-      user,
-      ...tokens,
-    };
+    return { user: await this.getAuthUser(user.id), ...tokens };
   }
 
   async getNewTokens(dto: RefreshTokenDto): Promise<AuthResponse> {
-    const result: Token = await this.jwtService.verifyAsync(dto.refreshToken);
+    let payload: Token;
 
-    if (!result) {
+    try {
+      payload = await this.jwtService.verifyAsync<Token>(dto.refreshToken, {
+        secret: getJwtSecret(this.configService, 'refresh'),
+        issuer: 'feeds-backend',
+        audience: 'feeds-refresh',
+      });
+    } catch {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    if (payload.type !== 'refresh' || !payload.sub) {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
     const user = await this.prismaService.user.findUnique({
-      where: { email: result.email },
+      where: { id: payload.sub },
+      select: { id: true, email: true, refreshTokenHash: true },
     });
+
+    if (
+      !user?.refreshTokenHash ||
+      !this.tokenHashesMatch(dto.refreshToken, user.refreshTokenHash)
+    ) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
 
     const tokens = await this.generateTokens(user);
-
-    return {
-      user,
-      ...tokens,
-    };
+    return { user: await this.getAuthUser(user.id), ...tokens };
   }
 
-  private async generateTokens(user: User): Promise<Tokens> {
-    const data = { id: user.id, email: user.email };
-
-    const accessToken = this.jwtService.sign(data, {
-      expiresIn: '1d',
+  async logout(userId: string): Promise<void> {
+    await this.prismaService.user.update({
+      where: { id: userId },
+      data: { refreshTokenHash: null },
     });
+  }
 
-    const refreshToken = this.jwtService.sign(data, {
-      expiresIn: '7d',
+  private async generateTokens(
+    user: Pick<User, 'id' | 'email'>,
+  ): Promise<Tokens> {
+    const base = { sub: user.id, email: user.email };
+    const [accessToken, refreshToken] = await Promise.all([
+      this.jwtService.signAsync(
+        { ...base, type: 'access', jti: randomUUID() },
+        {
+          secret: getJwtSecret(this.configService, 'access'),
+          expiresIn: '15m',
+          issuer: 'feeds-backend',
+          audience: 'feeds-api',
+        },
+      ),
+      this.jwtService.signAsync(
+        { ...base, type: 'refresh', jti: randomUUID() },
+        {
+          secret: getJwtSecret(this.configService, 'refresh'),
+          expiresIn: '7d',
+          issuer: 'feeds-backend',
+          audience: 'feeds-refresh',
+        },
+      ),
+    ]);
+
+    await this.prismaService.user.update({
+      where: { id: user.id },
+      data: { refreshTokenHash: this.hashToken(refreshToken) },
     });
 
     return { accessToken, refreshToken };
   }
 
-  private hashPassword(str: string): string {
-    return hashSync(str, 10);
+  private getAuthUser(id: string) {
+    return this.prismaService.user.findUniqueOrThrow({
+      where: { id },
+      select: authUserSelect,
+    });
   }
 
-  private authIncludeOpts() {
-    return {
-      articles: true,
-      favorites: true,
-      followers: true,
-      following: true,
-    };
+  private normalizeEmail(email: string): string {
+    return email.trim().toLowerCase();
+  }
+
+  private hashToken(token: string): string {
+    return createHash('sha256').update(token).digest('hex');
+  }
+
+  private tokenHashesMatch(token: string, expectedHash: string): boolean {
+    const actual = Buffer.from(this.hashToken(token), 'hex');
+    const expected = Buffer.from(expectedHash, 'hex');
+    return (
+      actual.length === expected.length && timingSafeEqual(actual, expected)
+    );
   }
 }

@@ -1,4 +1,5 @@
-import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsEnum, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 import { ArticlesSort } from 'src/article/dto/get-articles-query-params.dto';
 
 export class GetTagsDto {
@@ -7,7 +8,10 @@ export class GetTagsDto {
   q?: string;
 
   @IsOptional()
-  @IsString()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
   per_page?: number;
 
   @IsOptional()
@@ -15,6 +19,8 @@ export class GetTagsDto {
   sort_by?: ArticlesSort;
 
   @IsOptional()
-  @IsString()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
   page?: number;
 }

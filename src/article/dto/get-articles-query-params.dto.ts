@@ -1,4 +1,5 @@
-import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsEnum, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 
 export enum ArticlesSort {
   LATEST = 'latest',
@@ -16,10 +17,15 @@ export class GetArticlesQueryParamsDto {
   sort_by?: ArticlesSort;
 
   @IsOptional()
-  @IsString()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
   page?: number;
 
   @IsOptional()
-  @IsString()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
   per_page?: number;
 }

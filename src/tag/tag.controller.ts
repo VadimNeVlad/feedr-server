@@ -6,6 +6,7 @@ import {
   Post,
   Query,
   UseGuards,
+  ParseArrayPipe,
 } from '@nestjs/common';
 import { TagService } from './tag.service';
 import { JwtGuard } from 'src/auth/guards/jwt.guard';
@@ -34,7 +35,10 @@ export class TagController {
 
   @Post()
   @UseGuards(JwtGuard)
-  async createTags(@Body() dto: CreateTagsDto[]): Promise<TagsCount> {
+  async createTags(
+    @Body(new ParseArrayPipe({ items: CreateTagsDto, whitelist: true }))
+    dto: CreateTagsDto[],
+  ): Promise<TagsCount> {
     return this.tagService.createTags(dto);
   }
 }

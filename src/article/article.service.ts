@@ -3,11 +3,12 @@ import {
   ConflictException,
   NotFoundException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateArticleDto } from './dto/create-article.dto';
 import slugify from 'slugify';
-import { Article, Prisma, Tag, User } from '@prisma/client';
+import { Article, Prisma } from '@prisma/client';
 import { UpdateArticleDto } from './dto/update-article.dto';
 import {
   ArticlesSort,
@@ -15,6 +16,8 @@ import {
 } from './dto/get-articles-query-params.dto';
 import { ArticleData } from './interfaces/article-data';
 import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
+import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user';
+import { UploadedFile } from 'src/common/interfaces/uploaded-file';
 
 @Injectable()
 export class ArticleService {
@@ -41,7 +44,7 @@ export class ArticleService {
       this.prismaService.article.findMany({
         where,
         skip: page * per_page,
-        take: +per_page,
+        take: per_page,
         include: this.articleIncludeOpts(),
         orderBy,
       }),
@@ -64,7 +67,7 @@ export class ArticleService {
       this.prismaService.article.findMany({
         where,
         skip: page * per_page,
-        take: +per_page,
+        take: per_page,
         include: this.articleIncludeOpts(),
         orderBy: { createdAt: 'desc' },
       }),
@@ -74,7 +77,11 @@ export class ArticleService {
     return { articles, _count: articlesCount };
   }
 
-  async getReadingList(uid: string): Promise<ArticleData> {
+  async getReadingList(
+    uid: string,
+    queryDto: GetArticlesQueryParamsDto,
+  ): Promise<ArticleData> {
+    const { page = 0, per_page = 10 } = queryDto;
     const where: Prisma.ArticleWhereInput = {
       favorited: { some: { id: uid } },
     };
@@ -82,6 +89,8 @@ export class ArticleService {
     const [articles, articlesCount] = await Promise.all([
       this.prismaService.article.findMany({
         where,
+        skip: page * per_page,
+        take: per_page,
         include: this.articleIncludeOpts(),
         orderBy: { createdAt: 'desc' },
       }),
@@ -96,13 +105,8 @@ export class ArticleService {
     return article;
   }
 
-  async createArticle(
-    id: string,
-    dto: CreateArticleDto,
-    file: Express.Multer.File,
-  ) {
-    const tagList = JSON.parse(dto.tagList);
-    const slug = slugify(dto.title, { lower: true });
+  async createArticle(id: string, dto: CreateArticleDto, file: UploadedFile) {
+    const slug = this.createSlug(dto.title);
 
     const existingArticle = await this.prismaService.article.findUnique({
       where: { slug },
@@ -116,11 +120,12 @@ export class ArticleService {
 
     return await this.prismaService.article.create({
       data: {
-        ...dto,
-        slug: slug,
+        title: dto.title,
+        body: dto.body,
+        slug,
         image: image && image.secure_url,
         tagList: {
-          connectOrCreate: tagList.map((tag: Tag) => ({
+          connectOrCreate: dto.tagList.map((tag) => ({
             where: {
               name: tag.name,
             },
@@ -139,28 +144,40 @@ export class ArticleService {
     uid: string,
     id: string,
     dto: UpdateArticleDto,
-    file: Express.Multer.File,
+    file: UploadedFile,
   ): Promise<Article> {
-    const { title, image } = dto;
+    const { title, body, image } = dto;
     const article = await this.findArticleById(id);
 
     if (article.authorId !== uid) {
       throw new ForbiddenException('You are not allowed to update this post');
     }
 
-    const imageURL = file ? await this.cloudinaryService.uploadImage(file) : '';
+    const uploadedImageUrl = file
+      ? (await this.cloudinaryService.uploadImage(file)).secure_url
+      : undefined;
 
-    return await this.prismaService.article.update({
+    const updatedArticle = await this.prismaService.article.update({
       where: {
         id,
       },
       data: {
-        ...dto,
-        slug: slugify(title, { lower: true }),
-        image: image || (imageURL && imageURL.secure_url),
+        ...(title !== undefined ? { title, slug: this.createSlug(title) } : {}),
+        ...(body !== undefined ? { body } : {}),
+        ...(uploadedImageUrl
+          ? { image: uploadedImageUrl }
+          : image !== undefined
+            ? { image }
+            : {}),
       },
       include: this.articleIncludeOpts(),
     });
+
+    if (uploadedImageUrl) {
+      await this.cloudinaryService.deleteImageByUrl(article.image);
+    }
+
+    return updatedArticle;
   }
 
   async deleteArticle(uid: string, id: string): Promise<void> {
@@ -170,27 +187,28 @@ export class ArticleService {
       throw new ForbiddenException('You are not allowed to delete this post');
     }
 
-    await this.prismaService.comment.deleteMany({
-      where: { articleId: article.id },
-    });
+    await this.prismaService.$transaction([
+      this.prismaService.comment.deleteMany({
+        where: { articleId: article.id },
+      }),
+      this.prismaService.article.delete({ where: { id } }),
+    ]);
 
-    await this.prismaService.article.delete({
-      where: { id },
-    });
+    await this.cloudinaryService.deleteImageByUrl(article.image);
   }
 
-  async favoriteArticle(user: User, id: string) {
+  async favoriteArticle(user: AuthenticatedUser, id: string) {
     return await this.prismaService.article.update({
       where: { id },
-      data: { favorited: { connect: { ...user } } },
+      data: { favorited: { connect: { id: user.id } } },
       include: this.articleIncludeOpts(),
     });
   }
 
-  async unfavoriteArticle(user: User, id: string) {
+  async unfavoriteArticle(user: AuthenticatedUser, id: string) {
     return await this.prismaService.article.update({
       where: { id },
-      data: { favorited: { disconnect: { ...user } } },
+      data: { favorited: { disconnect: { id: user.id } } },
       include: this.articleIncludeOpts(),
     });
   }
@@ -209,7 +227,7 @@ export class ArticleService {
   }
 
   private getOrderBy(
-    sortBy: ArticlesSort,
+    sortBy?: ArticlesSort,
   ): Prisma.ArticleOrderByWithRelationInput {
     switch (sortBy) {
       case ArticlesSort.TOP:
@@ -221,24 +239,26 @@ export class ArticleService {
     }
   }
 
+  private createSlug(title: string): string {
+    const slug = slugify(title, { lower: true, strict: true, trim: true });
+    if (!slug) {
+      throw new BadRequestException('Title must contain slug-compatible text');
+    }
+    return slug;
+  }
+
   private articleIncludeOpts() {
     return {
       author: {
         select: {
           id: true,
           name: true,
-          email: true,
           bio: true,
           image: true,
           createdAt: true,
         },
       },
       tagList: true,
-      favorited: {
-        select: {
-          id: true,
-        },
-      },
       _count: {
         select: {
           comments: true,

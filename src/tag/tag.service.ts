@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateTagsDto } from './dto/create-tags.dto';
 import { Prisma, Tag } from '@prisma/client';
@@ -20,7 +20,7 @@ export class TagService {
           contains: q,
         },
       },
-      take: +per_page,
+      take: per_page,
       select: {
         name: true,
         id: true,
@@ -49,7 +49,7 @@ export class TagService {
     const orderBy: Prisma.TagOrderByWithRelationInput =
       this.getOrderBy(sort_by);
 
-    return await this.prismaService.tag.findUnique({
+    const tag = await this.prismaService.tag.findUnique({
       where: {
         name: tagName,
       },
@@ -59,31 +59,29 @@ export class TagService {
             author: {
               select: {
                 name: true,
-                email: true,
                 bio: true,
                 image: true,
                 createdAt: true,
               },
             },
             tagList: true,
-            favorited: {
-              select: {
-                id: true,
-              },
-            },
             _count: {
               select: {
                 comments: true,
+                favorited: true,
               },
             },
           },
           skip: page * per_page,
-          take: +per_page,
+          take: per_page,
           orderBy,
         },
         _count: true,
       },
     });
+
+    if (!tag) throw new NotFoundException('Tag does not exist');
+    return tag;
   }
 
   async createTags(dto: CreateTagsDto[]): Promise<TagsCount> {
@@ -94,7 +92,7 @@ export class TagService {
   }
 
   private getOrderBy(
-    sortBy: ArticlesSort,
+    sortBy?: ArticlesSort,
   ): Prisma.ArticleOrderByWithRelationInput {
     switch (sortBy) {
       case ArticlesSort.TOP:

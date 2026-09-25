@@ -1,8 +1,10 @@
 export interface Token {
-  id: string;
+  sub: string;
   email: string;
-  iat: Date;
-  exp: Date;
+  type: 'access' | 'refresh';
+  jti: string;
+  iat: number;
+  exp: number;
 }
 
 export interface Tokens {

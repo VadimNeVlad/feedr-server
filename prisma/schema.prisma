@@ -8,21 +8,22 @@ datasource db {
 }
 
 model User {
-  id         String    @id @default(uuid())
-  email      String    @unique
-  name       String
-  password   String
-  bio        String    @default("")
-  image      String    @default("")
-  location   String    @default("")
-  websiteUrl String    @default("") @map("website_url")
-  createdAt  DateTime  @default(now()) @map("created_at")
-  updatedAt  DateTime  @updatedAt @map("updated_at")
-  articles   Article[] @relation("articles")
-  favorites  Article[] @relation("favorites")
-  following  Follow[]  @relation("follower")
-  followers  Follow[]  @relation("following")
-  comments   Comment[]
+  id               String    @id @default(uuid())
+  email            String    @unique
+  name             String
+  password         String
+  refreshTokenHash String?   @map("refresh_token_hash")
+  bio              String    @default("")
+  image            String    @default("")
+  location         String    @default("")
+  websiteUrl       String    @default("") @map("website_url")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  articles         Article[] @relation("articles")
+  favorites        Article[] @relation("favorites")
+  following        Follow[]  @relation("follower")
+  followers        Follow[]  @relation("following")
+  comments         Comment[]
 
   @@map("users")
 }
@@ -36,11 +37,12 @@ model Article {
   tagList   Tag[]
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
-  author    User      @relation("articles", fields: [authorId], references: [id])
+  author    User      @relation("articles", fields: [authorId], references: [id], onDelete: Cascade)
   authorId  String    @map("author_id")
   favorited User[]    @relation("favorites")
   comments  Comment[]
 
+  @@index([authorId])
   @@map("articles")
 }
 
@@ -53,22 +55,26 @@ model Tag {
 }
 
 model Follow {
-  follower    User?    @relation("follower", fields: [followerId], references: [id])
+  follower    User     @relation("follower", fields: [followerId], references: [id], onDelete: Cascade)
   followerId  String   @map("follower_id")
-  following   User?    @relation("following", fields: [followingId], references: [id])
+  following   User     @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
   followingId String   @map("following_id")
   createdAt   DateTime @default(now()) @map("created_at")
 
   @@id([followerId, followingId])
+  @@index([followingId])
 }
 
 model Comment {
   id        String   @id @default(uuid())
   content   String
-  author    User     @relation(fields: [authorId], references: [id])
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
   authorId  String   @map("author_id")
-  article   Article  @relation(fields: [articleId], references: [id])
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
   articleId String   @map("article_id")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([authorId])
+  @@index([articleId])
 }

@@ -1,6 +1,6 @@
-import { Article } from '@prisma/client';
+import { ArticleResponse } from '../article.select';
 
 export interface ArticleData {
-  articles: Article[];
+  articles: ArticleResponse[];
   _count: number;
 }

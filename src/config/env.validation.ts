@@ -5,6 +5,8 @@ interface Environment {
   CLOUDINARY_API_KEY?: string;
   CLOUDINARY_API_SECRET?: string;
   PORT?: string;
+  CORS_ORIGINS?: string;
+  TRUST_PROXY?: string;
   [key: string]: unknown;
 }
 
@@ -32,5 +34,30 @@ export function validateEnvironment(config: Environment): Environment {
     throw new Error('PORT must be a number');
   }
 
+  // A hop count only: `true` would trust any client-supplied X-Forwarded-For.
+  if (config.TRUST_PROXY && !/^\d+$/.test(config.TRUST_PROXY)) {
+    throw new Error(
+      'TRUST_PROXY must be the number of reverse proxies in front of the app',
+    );
+  }
+
+  const invalidOrigins = (config.CORS_ORIGINS ?? '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter((origin) => origin && !isOrigin(origin));
+  if (invalidOrigins.length > 0) {
+    throw new Error(
+      `CORS_ORIGINS must be comma-separated origins like https://example.com, got: ${invalidOrigins.join(', ')}`,
+    );
+  }
+
   return config;
+}
+
+function isOrigin(value: string): boolean {
+  try {
+    return new URL(value).origin === value;
+  } catch {
+    return false;
+  }
 }

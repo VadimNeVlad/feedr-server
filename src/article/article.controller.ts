@@ -15,41 +15,55 @@ import {
 } from '@nestjs/common';
 import { ArticleService } from './article.service';
 import { JwtGuard } from 'src/auth/guards/jwt.guard';
+import { OptionalJwtGuard } from 'src/auth/guards/optional-jwt.guard';
 import { CurrentUser } from 'src/user/decorators/current-user.decorator';
 import { CreateArticleDto } from './dto/create-article.dto';
-import { Article } from '@prisma/client';
+import { ArticleResponse } from './article.select';
 import { UpdateArticleDto } from './dto/update-article.dto';
 import { GetArticlesQueryParamsDto } from './dto/get-articles-query-params.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ArticleData } from './interfaces/article-data';
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user';
-import { ImageFileValidator } from 'src/common/validators/image-file.validator';
+import {
+  ImageFileValidator,
+  MAX_IMAGE_SIZE,
+} from 'src/common/validators/image-file.validator';
 import { UploadedFile as UploadedImage } from 'src/common/interfaces/uploaded-file';
-
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 
 @Controller('articles')
 export class ArticleController {
   constructor(private readonly articleService: ArticleService) {}
 
   @Get()
+  @UseGuards(OptionalJwtGuard)
   async getAllArticles(
     @Query() queryDto: GetArticlesQueryParamsDto,
+    @CurrentUser('id') viewerId?: string,
   ): Promise<ArticleData> {
-    return this.articleService.getAllArticles(queryDto);
+    return this.articleService.getAllArticles(queryDto, viewerId);
   }
 
   @Get(':id')
-  async getSingleArticle(@Param('id') id: string): Promise<Article> {
-    return this.articleService.getSingleArticle(id);
+  @UseGuards(OptionalJwtGuard)
+  async getSingleArticle(
+    @Param('id') id: string,
+    @CurrentUser('id') viewerId?: string,
+  ): Promise<ArticleResponse> {
+    return this.articleService.getSingleArticle(id, viewerId);
   }
 
   @Get('author/:authorId')
+  @UseGuards(OptionalJwtGuard)
   async getArticlesByAuthor(
     @Param('authorId') authorId: string,
     @Query() queryDto: GetArticlesQueryParamsDto,
+    @CurrentUser('id') viewerId?: string,
   ): Promise<ArticleData> {
-    return this.articleService.getArticlesByAuthor(authorId, queryDto);
+    return this.articleService.getArticlesByAuthor(
+      authorId,
+      queryDto,
+      viewerId,
+    );
   }
 
   @Get('user/reading-list')
@@ -81,7 +95,7 @@ export class ArticleController {
       }),
     )
     file: UploadedImage,
-  ): Promise<Article> {
+  ): Promise<ArticleResponse> {
     return this.articleService.createArticle(id, dto, file);
   }
 
@@ -106,7 +120,7 @@ export class ArticleController {
       }),
     )
     file: UploadedImage,
-  ): Promise<Article> {
+  ): Promise<ArticleResponse> {
     return this.articleService.updateArticle(uid, id, dto, file);
   }
 
@@ -124,7 +138,7 @@ export class ArticleController {
   async favoriteArticle(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
-  ) {
+  ): Promise<ArticleResponse> {
     return this.articleService.favoriteArticle(user, id);
   }
 
@@ -133,7 +147,7 @@ export class ArticleController {
   async unfavoriteArticle(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
-  ) {
+  ): Promise<ArticleResponse> {
     return this.articleService.unfavoriteArticle(user, id);
   }
 }

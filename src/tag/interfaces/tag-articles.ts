@@ -1,7 +1,7 @@
-import { Article } from '@prisma/client';
+import { ArticleResponse } from '../../article/article.select';
 
 export interface TagArticles {
-  articles: Article[];
+  articles: ArticleResponse[];
   _count: {
     articles: number;
   };

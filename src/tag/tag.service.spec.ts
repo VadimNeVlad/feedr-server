@@ -23,4 +23,16 @@ describe('TagService', () => {
       expect.objectContaining({ take: 25 }),
     );
   });
+
+  it('looks up tag articles by normalized tag name', async () => {
+    prisma.tag.findUnique.mockResolvedValue({
+      articles: [],
+      _count: { articles: 0 },
+    });
+    await service.getTagArticles(' JavaScript ', {});
+
+    expect(prisma.tag.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { name: 'javascript' } }),
+    );
+  });
 });

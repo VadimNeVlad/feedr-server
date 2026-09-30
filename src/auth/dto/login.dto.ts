@@ -1,3 +1,4 @@
+import { MaxPasswordBytes } from '../../common/validators/max-password-bytes';
 import { IsEmail, IsString, MaxLength, MinLength } from 'class-validator';
 
 export class LoginDto {
@@ -7,5 +8,6 @@ export class LoginDto {
   @MinLength(6)
   @MaxLength(72)
   @IsString()
+  @MaxPasswordBytes()
   password!: string;
 }

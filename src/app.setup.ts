@@ -2,9 +2,11 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
 import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { requestLogging } from './common/middleware/request-logging.middleware';
 
 export function configureApp(app: INestApplication): void {
   app.setGlobalPrefix('api');
+  app.use(requestLogging);
   app.use(helmet());
   app.useGlobalPipes(
     new ValidationPipe({

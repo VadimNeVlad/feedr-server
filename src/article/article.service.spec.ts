@@ -26,7 +26,7 @@ describe('ArticleService', () => {
       id: 'article-1',
       authorId: 'user-1',
     });
-    prisma.article.update.mockResolvedValue({ id: 'article-1' });
+    prisma.article.update.mockResolvedValue({ id: 'article-1', favorited: [] });
 
     await service.updateArticle(
       'user-1',
@@ -40,8 +40,51 @@ describe('ArticleService', () => {
     );
   });
 
+  it('suffixes the slug with the article id so titles may repeat', async () => {
+    prisma.article.create.mockResolvedValue({ id: 'x', favorited: [] });
+
+    await service.createArticle('user-1', {
+      title: 'Hello World',
+      body: 'Body',
+      tagList: [],
+    });
+
+    const { id, slug } = prisma.article.create.mock.calls[0][0].data;
+    expect(slug).toBe(`hello-world-${id.slice(0, 8)}`);
+    expect(prisma.article.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('keeps the slug suffix when the title changes', async () => {
+    prisma.article.findUnique.mockResolvedValue({
+      id: 'abcdef12-0000',
+      authorId: 'user-1',
+    });
+    prisma.article.update.mockResolvedValue({ id: 'x', favorited: [] });
+
+    await service.updateArticle('user-1', 'abcdef12-0000', { title: '🎉' });
+
+    expect(prisma.article.update.mock.calls[0][0].data.slug).toBe('abcdef12');
+  });
+
+  it('connects each tag name only once', async () => {
+    prisma.article.create.mockResolvedValue({ id: 'x', favorited: [] });
+
+    await service.createArticle('user-1', {
+      title: 'Tags',
+      body: 'Body',
+      tagList: [{ name: 'js' }, { name: 'js' }, { name: 'ts' }],
+    });
+
+    expect(
+      prisma.article.create.mock.calls[0][0].data.tagList.connectOrCreate,
+    ).toEqual([
+      { where: { name: 'js' }, create: { name: 'js' } },
+      { where: { name: 'ts' }, create: { name: 'ts' } },
+    ]);
+  });
+
   it('favorites by authenticated user id only', async () => {
-    prisma.article.update.mockResolvedValue({ id: 'article-1' });
+    prisma.article.update.mockResolvedValue({ id: 'article-1', favorited: [] });
 
     await service.favoriteArticle(
       { id: 'user-1', email: 'alice@example.com' },

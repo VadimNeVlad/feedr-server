@@ -33,7 +33,7 @@ export const privateUserProfileSelect = {
   email: true,
 } satisfies Prisma.UserSelect;
 
-export type PublicUser = Prisma.UserGetPayload<{
+export type PublicUser = { isFollowing?: boolean } & Prisma.UserGetPayload<{
   select: typeof publicUserProfileSelect;
 }>;
 

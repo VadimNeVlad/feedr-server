@@ -17,6 +17,9 @@ import { RegisterDto } from './dto/register.dto';
 import { AuthResponse } from './interfaces/auth';
 import { Token, Tokens } from './interfaces/token';
 
+const DUMMY_PASSWORD_HASH =
+  '$2b$12$swIAdIQcDKno6dMAoPKyvu/A2NgThbfXwQK1ArwM9c2yuLLQi1x4C';
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -57,7 +60,13 @@ export class AuthService {
       select: { id: true, email: true, password: true },
     });
 
-    if (!user || !(await compare(dto.password, user.password))) {
+    // Compare against a dummy hash for unknown emails so response time
+    // does not reveal which addresses are registered.
+    const passwordMatches = await compare(
+      dto.password,
+      user?.password ?? DUMMY_PASSWORD_HASH,
+    );
+    if (!user || !passwordMatches) {
       throw new UnauthorizedException('Invalid email or password');
     }
 
@@ -94,7 +103,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    const tokens = await this.generateTokens(user);
+    const tokens = await this.generateTokens(user, user.refreshTokenHash);
     return { user: await this.getAuthUser(user.id), ...tokens };
   }
 
@@ -107,6 +116,7 @@ export class AuthService {
 
   private async generateTokens(
     user: Pick<User, 'id' | 'email'>,
+    expectedHash?: string,
   ): Promise<Tokens> {
     const base = { sub: user.id, email: user.email };
     const [accessToken, refreshToken] = await Promise.all([
@@ -130,10 +140,17 @@ export class AuthService {
       ),
     ]);
 
-    await this.prismaService.user.update({
-      where: { id: user.id },
-      data: { refreshTokenHash: this.hashToken(refreshToken) },
-    });
+    const data = { refreshTokenHash: this.hashToken(refreshToken) };
+    if (expectedHash !== undefined) {
+      const result = await this.prismaService.user.updateMany({
+        where: { id: user.id, refreshTokenHash: expectedHash },
+        data,
+      });
+      if (result.count !== 1)
+        throw new UnauthorizedException('Refresh token has already been used');
+    } else {
+      await this.prismaService.user.update({ where: { id: user.id }, data });
+    }
 
     return { accessToken, refreshToken };
   }

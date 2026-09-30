@@ -3,10 +3,18 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Comment } from '@prisma/client';
+import { Comment, Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { GetCommentsDto } from './dto/get-comments.dto';
+
+const commentInclude = {
+  author: { select: { id: true, image: true, name: true } },
+} satisfies Prisma.CommentInclude;
+
+export type CommentWithAuthor = Prisma.CommentGetPayload<{
+  include: typeof commentInclude;
+}>;
 
 @Injectable()
 export class CommentService {
@@ -15,21 +23,13 @@ export class CommentService {
   async getComments(
     articleId: string,
     query: GetCommentsDto,
-  ): Promise<Comment[]> {
+  ): Promise<CommentWithAuthor[]> {
     const { page = 0, per_page = 20 } = query;
     return await this.prismaService.comment.findMany({
       where: { articleId },
       skip: page * per_page,
       take: per_page,
-      include: {
-        author: {
-          select: {
-            id: true,
-            image: true,
-            name: true,
-          },
-        },
-      },
+      include: commentInclude,
       orderBy: {
         createdAt: 'desc',
       },

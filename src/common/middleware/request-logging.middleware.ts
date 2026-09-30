@@ -1,44 +1,35 @@
-import {
-  CallHandler,
-  ExecutionContext,
-  Injectable,
-  Logger,
-  NestInterceptor,
-} from '@nestjs/common';
-import { Request, Response } from 'express';
+import { Logger } from '@nestjs/common';
+import { NextFunction, Request, Response } from 'express';
 import { randomUUID } from 'crypto';
-import { Observable, finalize } from 'rxjs';
 
-@Injectable()
-export class RequestLoggingInterceptor implements NestInterceptor {
-  private readonly logger = new Logger('HTTP');
+const logger = new Logger('HTTP');
 
-  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
-    if (context.getType() !== 'http') return next.handle();
+// Registered as plain middleware (not an interceptor) so requests rejected by
+// guards (401, 429) and unknown routes (404) are logged and get a request id too.
+export function requestLogging(
+  request: Request,
+  response: Response,
+  next: NextFunction,
+): void {
+  const suppliedRequestId = request.header('x-request-id');
+  const requestId =
+    suppliedRequestId && suppliedRequestId.length <= 128
+      ? suppliedRequestId
+      : randomUUID();
+  const startedAt = Date.now();
 
-    const request = context.switchToHttp().getRequest<Request>();
-    const response = context.switchToHttp().getResponse<Response>();
-    const suppliedRequestId = request.header('x-request-id');
-    const requestId =
-      suppliedRequestId && suppliedRequestId.length <= 128
-        ? suppliedRequestId
-        : randomUUID();
-    const startedAt = Date.now();
+  response.setHeader('x-request-id', requestId);
 
-    response.setHeader('x-request-id', requestId);
-
-    return next.handle().pipe(
-      finalize(() => {
-        this.logger.log(
-          JSON.stringify({
-            requestId,
-            method: request.method,
-            path: request.path,
-            statusCode: response.statusCode,
-            durationMs: Date.now() - startedAt,
-          }),
-        );
+  response.once('finish', () => {
+    logger.log(
+      JSON.stringify({
+        requestId,
+        method: request.method,
+        path: request.path,
+        statusCode: response.statusCode,
+        durationMs: Date.now() - startedAt,
       }),
     );
-  }
+  });
+  next();
 }

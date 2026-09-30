@@ -9,10 +9,9 @@ import { TagModule } from './tag/tag.module';
 import { CommentModule } from './comment/comment.module';
 import { FollowModule } from './follow/follow.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
-import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { validateEnvironment } from './config/env.validation';
-import { RequestLoggingInterceptor } from './common/interceptors/request-logging.interceptor';
 
 @Module({
   imports: [
@@ -28,9 +27,6 @@ import { RequestLoggingInterceptor } from './common/interceptors/request-logging
     CloudinaryModule,
   ],
   controllers: [AppController],
-  providers: [
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
-    { provide: APP_INTERCEPTOR, useClass: RequestLoggingInterceptor },
-  ],
+  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}

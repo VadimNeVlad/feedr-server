@@ -9,7 +9,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { CommentService } from './comment.service';
+import { CommentService, CommentWithAuthor } from './comment.service';
 import { Comment } from '@prisma/client';
 import { JwtGuard } from 'src/auth/guards/jwt.guard';
 import { CurrentUser } from 'src/user/decorators/current-user.decorator';
@@ -24,7 +24,7 @@ export class CommentController {
   async getComments(
     @Param('articleId') articleId: string,
     @Query() query: GetCommentsDto,
-  ): Promise<Comment[]> {
+  ): Promise<CommentWithAuthor[]> {
     return this.commentService.getComments(articleId, query);
   }
 

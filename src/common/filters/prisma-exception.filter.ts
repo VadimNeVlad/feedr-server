@@ -17,7 +17,7 @@ export class PrismaExceptionFilter implements ExceptionFilter {
   catch(exception: Prisma.PrismaClientKnownRequestError, host: ArgumentsHost) {
     const response = host.switchToHttp().getResponse<Response>();
 
-    if (exception.code === 'P2002' || exception.code === 'P2003') {
+    if (exception.code === 'P2002') {
       const error = new ConflictException(
         'The requested change conflicts with existing data',
       );
@@ -25,7 +25,8 @@ export class PrismaExceptionFilter implements ExceptionFilter {
       return;
     }
 
-    if (exception.code === 'P2025') {
+    // P2003: a foreign key points to a missing row, e.g. commenting on a deleted article.
+    if (exception.code === 'P2025' || exception.code === 'P2003') {
       const error = new NotFoundException(
         'The requested resource does not exist',
       );

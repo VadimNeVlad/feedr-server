@@ -1,18 +1,8 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Post,
-  Query,
-  UseGuards,
-  ParseArrayPipe,
-} from '@nestjs/common';
+import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { TagService } from './tag.service';
-import { JwtGuard } from 'src/auth/guards/jwt.guard';
-import { CreateTagsDto } from './dto/create-tags.dto';
+import { OptionalJwtGuard } from 'src/auth/guards/optional-jwt.guard';
+import { CurrentUser } from '../user/decorators/current-user.decorator';
 import { Tag } from '@prisma/client';
-import { TagsCount } from './interfaces/tags-count';
 import { GetTagsDto } from './dto/get-tags.dto';
 import { TagArticles } from './interfaces/tag-articles';
 
@@ -26,19 +16,12 @@ export class TagController {
   }
 
   @Get(':tagName')
+  @UseGuards(OptionalJwtGuard)
   async getTagArticles(
     @Param('tagName') tagName: string,
     @Query() queryDto: GetTagsDto,
+    @CurrentUser('id') viewerId?: string,
   ): Promise<TagArticles> {
-    return this.tagService.getTagArticles(tagName, queryDto);
-  }
-
-  @Post()
-  @UseGuards(JwtGuard)
-  async createTags(
-    @Body(new ParseArrayPipe({ items: CreateTagsDto, whitelist: true }))
-    dto: CreateTagsDto[],
-  ): Promise<TagsCount> {
-    return this.tagService.createTags(dto);
+    return this.tagService.getTagArticles(tagName, queryDto, viewerId);
   }
 }

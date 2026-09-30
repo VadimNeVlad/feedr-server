@@ -4,6 +4,7 @@ import {
   IsString,
   IsUrl,
   MaxLength,
+  ValidateIf,
 } from 'class-validator';
 
 export class UpdateUserDto {
@@ -15,7 +16,12 @@ export class UpdateUserDto {
 
   @IsString()
   @IsOptional()
-  @IsUrl({ require_protocol: true })
+  @ValidateIf((dto) => dto.websiteUrl !== '')
+  @IsUrl({
+    require_protocol: true,
+    protocols: ['http', 'https'],
+    require_valid_protocol: true,
+  })
   @MaxLength(2048)
   websiteUrl?: string;
 

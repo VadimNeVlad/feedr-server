@@ -14,16 +14,18 @@ import {
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { JwtGuard } from 'src/auth/guards/jwt.guard';
+import { OptionalJwtGuard } from 'src/auth/guards/optional-jwt.guard';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { Follow } from './interfaces/follow';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { PrivateUser, PublicUser } from './user.select';
-import { ImageFileValidator } from 'src/common/validators/image-file.validator';
+import {
+  ImageFileValidator,
+  MAX_IMAGE_SIZE,
+} from 'src/common/validators/image-file.validator';
 import { UploadedFile as UploadedImage } from 'src/common/interfaces/uploaded-file';
-
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 
 @Controller('user')
 export class UserController {
@@ -36,8 +38,12 @@ export class UserController {
   }
 
   @Get(':id')
-  async getUserById(@Param('id') id: string): Promise<PublicUser> {
-    return this.userService.getUserById(id);
+  @UseGuards(OptionalJwtGuard)
+  async getUserById(
+    @Param('id') id: string,
+    @CurrentUser('id') viewerId?: string,
+  ): Promise<PublicUser> {
+    return this.userService.getUserById(id, viewerId);
   }
 
   @Put()

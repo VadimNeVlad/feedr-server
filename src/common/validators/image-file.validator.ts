@@ -1,6 +1,10 @@
 import { FileValidator } from '@nestjs/common';
 import { UploadedFile } from '../interfaces/uploaded-file';
 
+// Vercel rejects request bodies over 4.5 MB before they reach the app, so stay
+// below that to return a proper validation error instead of an opaque 413.
+export const MAX_IMAGE_SIZE = 4 * 1024 * 1024;
+
 export class ImageFileValidator extends FileValidator<Record<string, never>> {
   buildErrorMessage(): string {
     return 'Only JPEG, PNG, GIF, and WebP images are allowed';

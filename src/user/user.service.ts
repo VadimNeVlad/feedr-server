@@ -30,8 +30,14 @@ export class UserService {
     return this.findUser(id, true);
   }
 
-  async getUserById(id: string): Promise<PublicUser> {
-    return this.findUser(id, false);
+  async getUserById(id: string, viewerId?: string): Promise<PublicUser> {
+    const user = await this.findUser(id, false);
+    const isFollowing = viewerId
+      ? (await this.prismaService.follow.count({
+          where: { followerId: viewerId, followingId: id },
+        })) > 0
+      : false;
+    return { ...user, isFollowing };
   }
 
   async updateCurrentUser(id: string, dto: UpdateUserDto) {
@@ -45,25 +51,27 @@ export class UserService {
   }
 
   async updateAvatar(id: string, file: UploadedFile) {
-    if (!file) {
-      throw new NotFoundException();
-    }
-
     const currentUser = await this.prismaService.user.findUnique({
       where: { id },
       select: { image: true },
     });
     if (!currentUser) throw new NotFoundException('User does not exist');
 
-    const image = await this.cloudinaryService.uploadImage(file);
+    const asset = { kind: 'avatars' as const, id };
+    const image = await this.cloudinaryService.uploadImage(file, asset);
 
-    const updatedUser = await this.prismaService.user.update({
-      where: { id },
-      data: { image: image.secure_url },
-      select: privateUserSelect,
-    });
-
-    await this.cloudinaryService.deleteImageByUrl(currentUser.image);
+    let updatedUser;
+    try {
+      updatedUser = await this.prismaService.user.update({
+        where: { id },
+        data: { image: image.secure_url },
+        select: privateUserSelect,
+      });
+    } catch (error) {
+      await this.cloudinaryService.deleteImageByUrl(image.secure_url, asset);
+      throw error;
+    }
+    await this.cloudinaryService.deleteImageByUrl(currentUser.image, asset);
     return updatedUser;
   }
 
@@ -94,15 +102,14 @@ export class UserService {
   }
 
   async deleteCurrentUser(id: string): Promise<void> {
-    await this.findUser(id, true);
-
     const images = await this.prismaService.user.findUnique({
       where: { id },
       select: {
         image: true,
-        articles: { select: { image: true } },
+        articles: { select: { id: true, image: true } },
       },
     });
+    if (!images) throw new NotFoundException('User does not exist');
 
     await this.prismaService.user.delete({
       where: {
@@ -111,10 +118,16 @@ export class UserService {
     });
 
     await Promise.all([
-      this.cloudinaryService.deleteImageByUrl(images?.image),
-      ...(images?.articles.map((article) =>
-        this.cloudinaryService.deleteImageByUrl(article.image),
-      ) ?? []),
+      this.cloudinaryService.deleteImageByUrl(images.image, {
+        kind: 'avatars',
+        id,
+      }),
+      ...images.articles.map((article) =>
+        this.cloudinaryService.deleteImageByUrl(article.image, {
+          kind: 'articles',
+          id: article.id,
+        }),
+      ),
     ]);
   }
 

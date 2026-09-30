@@ -1,3 +1,4 @@
+import { MaxPasswordBytes } from '../../common/validators/max-password-bytes';
 import {
   IsEmail,
   IsString,
@@ -18,5 +19,6 @@ export class RegisterDto {
   @MinLength(10)
   @MaxLength(72)
   @IsString()
+  @MaxPasswordBytes()
   password!: string;
 }

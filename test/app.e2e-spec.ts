@@ -56,6 +56,13 @@ describe('health endpoint (e2e)', () => {
       .expect(400);
   });
 
+  it('assigns a request id even to requests that match no route', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/api/does-not-exist')
+      .expect(404);
+    expect(response.headers['x-request-id']).toMatch(/^[\w-]+$/);
+  });
+
   it('serves the generated OpenAPI document', async () => {
     const response = await request(app.getHttpServer())
       .get('/api/docs-json')

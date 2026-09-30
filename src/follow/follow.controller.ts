@@ -1,7 +1,7 @@
 import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
-import { FollowService } from './follow.service';
-import { JwtGuard } from 'src/auth/guards/jwt.guard';
-import { Follow } from '@prisma/client';
+import { OptionalJwtGuard } from 'src/auth/guards/optional-jwt.guard';
+import { CurrentUser } from '../user/decorators/current-user.decorator';
+import { FollowService, FollowWithUsers } from './follow.service';
 import { GetFollowsDto } from './dto/get-follows';
 
 @Controller()
@@ -9,20 +9,22 @@ export class FollowController {
   constructor(private readonly followService: FollowService) {}
 
   @Get(':id/following')
-  @UseGuards(JwtGuard)
+  @UseGuards(OptionalJwtGuard)
   async getFollowings(
     @Query() queryDto: GetFollowsDto,
     @Param('id') id: string,
-  ): Promise<Follow[]> {
-    return this.followService.getFollowings(queryDto, id);
+    @CurrentUser('id') viewerId?: string,
+  ): Promise<FollowWithUsers[]> {
+    return this.followService.getFollowings(queryDto, id, viewerId);
   }
 
   @Get(':id/followers')
-  @UseGuards(JwtGuard)
+  @UseGuards(OptionalJwtGuard)
   async getFollowers(
     @Query() queryDto: GetFollowsDto,
     @Param('id') id: string,
-  ): Promise<Follow[]> {
-    return this.followService.getFollowers(queryDto, id);
+    @CurrentUser('id') viewerId?: string,
+  ): Promise<FollowWithUsers[]> {
+    return this.followService.getFollowers(queryDto, id, viewerId);
   }
 }

@@ -5,6 +5,7 @@ export function createPrismaMock() {
       findUniqueOrThrow: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn(),
       delete: jest.fn(),
     },
     article: {
@@ -24,6 +25,7 @@ export function createPrismaMock() {
       deleteMany: jest.fn(),
     },
     follow: {
+      count: jest.fn().mockResolvedValue(0),
       findMany: jest.fn(),
       create: jest.fn(),
       deleteMany: jest.fn(),
@@ -31,7 +33,6 @@ export function createPrismaMock() {
     tag: {
       findMany: jest.fn(),
       findUnique: jest.fn(),
-      createMany: jest.fn(),
     },
     $transaction: jest.fn(),
     $queryRaw: jest.fn(),
@@ -40,6 +41,7 @@ export function createPrismaMock() {
 
 export const cloudinaryMock = {
   uploadImage: jest.fn(),
+  deleteImageByUrl: jest.fn(),
 };
 
 export const jwtMock = {

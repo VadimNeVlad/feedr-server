@@ -1,0 +1,20 @@
+# Allowlist: exclude everything, then re-include only what the build needs.
+# New files (secrets, local artifacts) stay out of the image by default.
+*
+
+# Dependency manifests (deps stage)
+!package.json
+!package-lock.json
+
+# Sources and build config (build stage)
+!src
+!tsconfig.json
+!tsconfig.build.json
+!nest-cli.json
+
+# Prisma schema and migrations (build and migrate stages)
+!prisma
+
+# Tests are not compiled into dist (see tsconfig.build.json)
+src/**/*.spec.ts
+src/testing

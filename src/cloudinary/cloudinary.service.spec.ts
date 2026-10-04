@@ -31,10 +31,17 @@ describe('CloudinaryService', () => {
     function failUploadWith(error: object) {
       jest
         .spyOn(v2.uploader, 'upload_stream')
-        .mockImplementation((_options, callback) => {
-          callback?.(error as UploadApiErrorResponse);
-          return new PassThrough() as unknown as UploadStream;
-        });
+        // upload_stream is overloaded and jest types the mock after the
+        // callback-only overload, so both parameters must be optional.
+        .mockImplementation(
+          (
+            _options?: unknown,
+            callback?: (error?: UploadApiErrorResponse) => void,
+          ) => {
+            callback?.(error as UploadApiErrorResponse);
+            return new PassThrough() as unknown as UploadStream;
+          },
+        );
     }
 
     afterEach(() => jest.restoreAllMocks());

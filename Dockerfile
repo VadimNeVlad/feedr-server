@@ -6,6 +6,7 @@ FROM ${NODE_IMAGE} AS deps
 
 WORKDIR /app
 
+# hadolint ignore=DL3008
 RUN apt-get update \
   && apt-get install -y --no-install-recommends openssl \
   && rm -rf /var/lib/apt/lists/*
@@ -32,6 +33,7 @@ FROM ${NODE_IMAGE} AS prod
 
 WORKDIR /app
 
+# hadolint ignore=DL3008
 RUN apt-get update \
   && apt-get install -y --no-install-recommends openssl \
   && rm -rf /var/lib/apt/lists/*

@@ -23,7 +23,8 @@
     "test:e2e": "jest --config ./test/jest-e2e.json --runInBand",
     "prisma:generate": "prisma generate",
     "prisma:migrate:deploy": "prisma migrate deploy",
-    "check": "npm run lint:check && npm run test:ci && npm run test:e2e && npm run build"
+    "check": "npm run lint:check && npm run test:ci && npm run test:e2e && npm run build",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@nestjs/common": "^12.1.0",

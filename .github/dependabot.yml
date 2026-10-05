@@ -1,0 +1,91 @@
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+    open-pull-requests-limit: 10
+    # Freshly published versions are the riskiest: compromised releases are usually pulled within days.
+    cooldown:
+      default-days: 7
+      semver-major-days: 30
+    commit-message:
+      prefix: build
+      prefix-development: build
+      include: scope
+    # Majors that are migration projects rather than version bumps; they are
+    # planned deliberately. Security updates still arrive for these packages.
+    ignore:
+      # Types must match the Node major the app runs on (node:24 in the Dockerfile).
+      - dependency-name: "@types/node"
+        update-types: [version-update:semver-major]
+      # Prisma 7 replaces the client generator and requires driver adapters.
+      - dependency-name: "prisma"
+        update-types: [version-update:semver-major]
+      - dependency-name: "@prisma/*"
+        update-types: [version-update:semver-major]
+      # TypeScript 7 is the native compiler without the JS API that nest build,
+      # ts-node and ts-loader rely on.
+      - dependency-name: "typescript"
+        update-types: [version-update:semver-major]
+    # A dependency joins the first group it matches, so specific groups come first.
+    groups:
+      # The prisma CLI (dev) and @prisma/client (prod) must move in one PR; split
+      # by dependency type, the CLI and the client would end up on different versions.
+      prisma:
+        patterns: ["prisma", "@prisma/*"]
+      # Majors of packages that only work together arrive as one PR per family
+      # instead of one broken PR per package.
+      nestjs-major:
+        patterns: ["@nestjs/*"]
+        update-types: [major]
+      eslint-major:
+        patterns: ["eslint", "eslint-*", "@typescript-eslint/*"]
+        update-types: [major]
+      jest-major:
+        patterns: ["jest", "@types/jest", "@swc/jest"]
+        update-types: [major]
+      # Everything else: at most one PR per dependency type each week.
+      production-dependencies:
+        dependency-type: production
+        update-types: [minor, patch]
+      development-dependencies:
+        dependency-type: development
+        update-types: [minor, patch]
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: build
+      include: scope
+    ignore:
+      # Stay on the Node LTS line; moving to the next LTS is a deliberate upgrade.
+      - dependency-name: node
+        update-types: [version-update:semver-major]
+    groups:
+      docker-images:
+        patterns: ["*"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: ci
+      include: scope
+    groups:
+      github-actions:
+        patterns: ["*"]
